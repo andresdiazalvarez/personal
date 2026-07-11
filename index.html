@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PERSONAL</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="screen home-screen is-active" id="homeScreen" aria-labelledby="homeTitle">
+      <div class="brand-block">
+        <p class="app-name">PERSONAL</p>
+        <h1 id="homeTitle">AGENDA</h1>
+      </div>
+      <button class="primary-action" id="enterButton" type="button">Entrar</button>
+    </section>
+
+    <section class="screen agenda-screen" id="agendaScreen" aria-labelledby="agendaTitle">
+      <header class="agenda-header">
+        <button class="back-button" id="backButton" type="button" aria-label="Volver a la pantalla inicial">
+          <span aria-hidden="true">‹</span>
+          Volver
+        </button>
+        <div>
+          <p class="app-name">PERSONAL</p>
+          <h2 id="agendaTitle">Agenda</h2>
+        </div>
+      </header>
+
+      <form class="contact-form" id="contactForm" autocomplete="off">
+        <label>
+          Nombre
+          <input id="nameInput" name="name" type="text" placeholder="Nombre">
+        </label>
+        <label>
+          Teléfono
+          <input id="phoneInput" name="phone" type="tel" placeholder="Teléfono">
+        </label>
+        <label>
+          Correo electrónico
+          <input id="emailInput" name="email" type="email" placeholder="Correo electrónico">
+        </label>
+        <label>
+          Otros 1
+          <input id="otherOneInput" name="otherOne" type="text" placeholder="Otros 1">
+        </label>
+        <label>
+          Otros 2
+          <input id="otherTwoInput" name="otherTwo" type="text" placeholder="Otros 2">
+        </label>
+        <button class="primary-action form-submit" type="submit">Guardar</button>
+      </form>
+
+      <section class="tools-section" aria-label="Búsqueda y filtrado">
+        <div class="field-tool">
+          <label for="searchName">Buscar nombre</label>
+          <input id="searchName" type="search" data-search="name" placeholder="Buscar">
+          <select aria-label="Filtrar nombre" data-filter="name">
+            <option value="all">Todos</option>
+            <option value="filled">Con nombre</option>
+            <option value="empty">Sin nombre</option>
+          </select>
+        </div>
+        <div class="field-tool">
+          <label for="searchPhone">Buscar teléfono</label>
+          <input id="searchPhone" type="search" data-search="phone" placeholder="Buscar">
+          <select aria-label="Filtrar teléfono" data-filter="phone">
+            <option value="all">Todos</option>
+            <option value="filled">Con teléfono</option>
+            <option value="empty">Sin teléfono</option>
+          </select>
+        </div>
+        <div class="field-tool">
+          <label for="searchEmail">Buscar correo electrónico</label>
+          <input id="searchEmail" type="search" data-search="email" placeholder="Buscar">
+          <select aria-label="Filtrar correo electrónico" data-filter="email">
+            <option value="all">Todos</option>
+            <option value="filled">Con correo</option>
+            <option value="empty">Sin correo</option>
+          </select>
+        </div>
+        <div class="field-tool">
+          <label for="searchOtherOne">Buscar otros 1</label>
+          <input id="searchOtherOne" type="search" data-search="otherOne" placeholder="Buscar">
+          <select aria-label="Filtrar otros 1" data-filter="otherOne">
+            <option value="all">Todos</option>
+            <option value="filled">Con otros 1</option>
+            <option value="empty">Sin otros 1</option>
+          </select>
+        </div>
+        <div class="field-tool">
+          <label for="searchOtherTwo">Buscar otros 2</label>
+          <input id="searchOtherTwo" type="search" data-search="otherTwo" placeholder="Buscar">
+          <select aria-label="Filtrar otros 2" data-filter="otherTwo">
+            <option value="all">Todos</option>
+            <option value="filled">Con otros 2</option>
+            <option value="empty">Sin otros 2</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="contacts-section" aria-live="polite">
+        <div class="contacts-header">
+          <h3>Contactos</h3>
+          <button class="secondary-action" id="clearFiltersButton" type="button">Limpiar filtros</button>
+        </div>
+        <div class="contacts-list" id="contactsList"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
