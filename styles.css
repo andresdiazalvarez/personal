@@ -126,6 +126,12 @@ h3 {
   transform: translateY(0);
 }
 
+.secondary-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  transform: none;
+}
+
 .agenda-screen {
   padding: 24px;
   border: 1px solid var(--line);
@@ -141,6 +147,13 @@ h3 {
   justify-content: space-between;
   gap: 18px;
   margin-bottom: 24px;
+}
+
+.contacts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 .back-button,
@@ -299,6 +312,10 @@ select {
   .contacts-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .contacts-actions {
+    width: 100%;
   }
 
   .contact-form,

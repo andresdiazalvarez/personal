@@ -5,6 +5,7 @@ const backButton = document.getElementById("backButton");
 const contactForm = document.getElementById("contactForm");
 const contactsList = document.getElementById("contactsList");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
+const downloadExcelButton = document.getElementById("downloadExcelButton");
 
 const fields = [
   { key: "name", label: "Nombre" },
@@ -69,9 +70,61 @@ function matchesTools(contact) {
   });
 }
 
+function getVisibleContacts() {
+  return contacts.filter(matchesTools);
+}
+
+function escapeExcelCell(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function downloadExcel() {
+  const visibleContacts = getVisibleContacts();
+
+  if (visibleContacts.length === 0) {
+    return;
+  }
+
+  const headerCells = fields.map(({ label }) => `<th>${escapeExcelCell(label)}</th>`).join("");
+  const rows = visibleContacts
+    .map((contact) => {
+      const cells = fields.map(({ key }) => `<td>${escapeExcelCell(contact[key])}</td>`).join("");
+      return `<tr>${cells}</tr>`;
+    })
+    .join("");
+  const excelHtml = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
+  <table>
+    <thead><tr>${headerCells}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+  const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+
+  link.href = url;
+  link.download = `personal-agenda-${date}.xls`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function renderContacts() {
-  const visibleContacts = contacts.filter(matchesTools);
+  const visibleContacts = getVisibleContacts();
   contactsList.innerHTML = "";
+  downloadExcelButton.disabled = visibleContacts.length === 0;
 
   if (visibleContacts.length === 0) {
     const empty = document.createElement("p");
@@ -151,5 +204,7 @@ clearFiltersButton.addEventListener("click", () => {
   });
   renderContacts();
 });
+
+downloadExcelButton.addEventListener("click", downloadExcel);
 
 renderContacts();

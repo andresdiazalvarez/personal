@@ -8,6 +8,7 @@ App web sencilla de agenda personal con diseño malva claro.
 - Formulario de contactos con nombre, telefono, correo electronico, otros 1 y otros 2.
 - Busqueda independiente por cada campo.
 - Filtro independiente por cada campo: todos, con dato o sin dato.
+- Descarga de contactos visibles en formato Excel.
 - Guardado local en el navegador.
 - Preparada para GitHub Pages.
 
