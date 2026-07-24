@@ -7,7 +7,7 @@ App web sencilla de agenda personal con diseño malva claro.
 - Pantalla inicial con el titulo AGENDA.
 - Formulario de contactos con nombre, telefono, correo electronico, otros 1 y otros 2.
 - Dictado por voz para nombre, telefono, otros 1 y otros 2.
-- Conversion del telefono dictado por voz a numeros tras 3 segundos de silencio.
+- Dictado del telefono numero a numero y cierre tras 3 segundos sin oir otro numero.
 - Enlace directo para llamar a los telefonos guardados.
 - Modificacion de contactos guardados.
 - Busqueda independiente por cada campo.

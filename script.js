@@ -150,8 +150,13 @@ function createCallLink(phone) {
   return callLink;
 }
 
-function finishPhoneVoiceInput(input, recognition, transcriptParts) {
-  input.value = normalizePhoneText(transcriptParts.filter(Boolean).join(" "));
+function getLastPhoneDigit(value) {
+  const normalizedPhone = normalizePhoneText(value);
+  return normalizedPhone ? normalizedPhone.slice(-1) : "";
+}
+
+function finishPhoneVoiceInput(input, recognition) {
+  input.value = normalizePhoneText(input.value);
   voiceStatus.textContent = "Telefono escrito por voz.";
   phoneVoiceTimer = null;
 
@@ -164,7 +169,7 @@ function startVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = contactForm.elements[fieldKey];
   const isPhoneField = fieldKey === "phone";
-  let phoneTranscriptParts = [];
+  const processedResultIndexes = new Set();
 
   if (!SpeechRecognition) {
     voiceStatus.textContent = "Tu navegador no permite dictado por voz. Prueba con Chrome o Edge.";
@@ -192,28 +197,37 @@ function startVoiceInput(fieldKey) {
   recognition.interimResults = isPhoneField;
   recognition.maxAlternatives = 1;
   voiceStatus.textContent = isPhoneField
-    ? "Escuchando telefono... espera 3 segundos al terminar."
+    ? "Di los numeros uno a uno. Termino tras 3 segundos sin oir otro numero."
     : `Escuchando ${field.label.toLowerCase()}...`;
   if (isPhoneField) {
+    input.value = normalizePhoneText(input.value);
     input.blur();
   }
 
   recognition.addEventListener("result", (event) => {
     if (isPhoneField) {
-      for (let index = 0; index < event.results.length; index += 1) {
-        phoneTranscriptParts[index] = event.results[index][0].transcript.trim();
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        if (!event.results[index].isFinal || processedResultIndexes.has(index)) {
+          continue;
+        }
+
+        processedResultIndexes.add(index);
+        const digit = getLastPhoneDigit(event.results[index][0].transcript);
+
+        if (digit) {
+          input.value += digit;
+        }
       }
 
-      const phoneText = normalizePhoneText(phoneTranscriptParts.filter(Boolean).join(" "));
-      input.value = phoneText;
-      voiceStatus.textContent = "Recogiendo telefono... lo guardo cuando pasen 3 segundos de silencio.";
+      input.value = normalizePhoneText(input.value);
+      voiceStatus.textContent = "Numero recogido. Di el siguiente o espera 3 segundos para terminar.";
 
       if (phoneVoiceTimer) {
         clearTimeout(phoneVoiceTimer);
       }
 
       phoneVoiceTimer = setTimeout(() => {
-        finishPhoneVoiceInput(input, recognition, phoneTranscriptParts);
+        finishPhoneVoiceInput(input, recognition);
       }, 3000);
       return;
     }
@@ -230,7 +244,7 @@ function startVoiceInput(fieldKey) {
 
   recognition.addEventListener("end", () => {
     if (isPhoneField) {
-      input.value = normalizePhoneText(phoneTranscriptParts.filter(Boolean).join(" "));
+      input.value = normalizePhoneText(input.value);
     }
     if (!isPhoneField && phoneVoiceTimer) {
       clearTimeout(phoneVoiceTimer);
