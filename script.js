@@ -8,6 +8,9 @@ const clearFiltersButton = document.getElementById("clearFiltersButton");
 const downloadExcelButton = document.getElementById("downloadExcelButton");
 const saveButton = document.getElementById("saveButton");
 const cancelEditButton = document.getElementById("cancelEditButton");
+const tableWrap = document.getElementById("tableWrap");
+const tableCount = document.getElementById("tableCount");
+const voiceStatus = document.getElementById("voiceStatus");
 
 const fields = [
   { key: "name", label: "Nombre" },
@@ -20,6 +23,7 @@ const fields = [
 const storageKey = "personal-agenda-contacts";
 let contacts = JSON.parse(localStorage.getItem(storageKey) || "[]");
 let editingContactId = null;
+let activeRecognition = null;
 
 function createContactId() {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -100,6 +104,51 @@ function escapeExcelCell(value) {
     .replace(/"/g, "&quot;");
 }
 
+function startVoiceInput(fieldKey) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const input = contactForm.elements[fieldKey];
+
+  if (!SpeechRecognition) {
+    voiceStatus.textContent = "Tu navegador no permite dictado por voz. Prueba con Chrome o Edge.";
+    return;
+  }
+
+  if (activeRecognition) {
+    activeRecognition.stop();
+  }
+
+  const recognition = new SpeechRecognition();
+  const field = fields.find((item) => item.key === fieldKey);
+
+  activeRecognition = recognition;
+  recognition.lang = "es-ES";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  voiceStatus.textContent = `Escuchando ${field.label.toLowerCase()}...`;
+
+  recognition.addEventListener("result", (event) => {
+    const transcript = event.results[0][0].transcript.trim();
+    input.value = fieldKey === "phone" ? transcript.replace(/\s+/g, " ") : transcript;
+    input.focus();
+    voiceStatus.textContent = `${field.label} escrito por voz.`;
+  });
+
+  recognition.addEventListener("error", () => {
+    voiceStatus.textContent = "No se pudo recoger la voz. Intentalo de nuevo.";
+  });
+
+  recognition.addEventListener("end", () => {
+    activeRecognition = null;
+  });
+
+  try {
+    recognition.start();
+  } catch (error) {
+    activeRecognition = null;
+    voiceStatus.textContent = "No se pudo iniciar el microfono. Revisa los permisos del navegador.";
+  }
+}
+
 function downloadExcel() {
   const visibleContacts = getVisibleContacts();
 
@@ -139,10 +188,91 @@ function downloadExcel() {
   URL.revokeObjectURL(url);
 }
 
+function deleteContact(contact) {
+  contacts = contacts.filter((item) => item.id !== contact.id);
+  if (editingContactId === contact.id) {
+    setFormMode();
+  }
+  saveContacts();
+  renderContacts();
+}
+
+function editContact(contact) {
+  setFormMode(contact);
+  contactForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  contactForm.elements.name.focus();
+}
+
+function renderDataTable(visibleContacts) {
+  tableWrap.innerHTML = "";
+  tableCount.textContent = `${visibleContacts.length} registro${visibleContacts.length === 1 ? "" : "s"}`;
+
+  if (visibleContacts.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = contacts.length === 0 ? "No hay datos recogidos." : "No hay datos con esos filtros.";
+    tableWrap.append(empty);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "contacts-table";
+
+  const thead = document.createElement("thead");
+  const headerRow = document.createElement("tr");
+  fields.forEach(({ label }) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = label;
+    headerRow.append(th);
+  });
+  const actionsHeader = document.createElement("th");
+  actionsHeader.scope = "col";
+  actionsHeader.textContent = "Acciones";
+  headerRow.append(actionsHeader);
+  thead.append(headerRow);
+
+  const tbody = document.createElement("tbody");
+  visibleContacts.forEach((contact) => {
+    const row = document.createElement("tr");
+
+    fields.forEach(({ key }) => {
+      const td = document.createElement("td");
+      td.textContent = contact[key] || "-";
+      row.append(td);
+    });
+
+    const actions = document.createElement("td");
+    const actionGroup = document.createElement("div");
+    actionGroup.className = "table-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "edit-button";
+    editButton.type = "button";
+    editButton.textContent = "Modificar";
+    editButton.addEventListener("click", () => editContact(contact));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-button";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Borrar";
+    deleteButton.addEventListener("click", () => deleteContact(contact));
+
+    actionGroup.append(editButton, deleteButton);
+    actions.append(actionGroup);
+    row.append(actions);
+    tbody.append(row);
+  });
+
+  table.append(thead, tbody);
+  tableWrap.append(table);
+}
+
 function renderContacts() {
   const visibleContacts = getVisibleContacts();
   contactsList.innerHTML = "";
   downloadExcelButton.disabled = visibleContacts.length === 0;
+  renderDataTable(visibleContacts);
 
   if (visibleContacts.length === 0) {
     const empty = document.createElement("p");
@@ -179,24 +309,13 @@ function renderContacts() {
     editButton.className = "edit-button";
     editButton.type = "button";
     editButton.textContent = "Modificar";
-    editButton.addEventListener("click", () => {
-      setFormMode(contact);
-      contactForm.scrollIntoView({ behavior: "smooth", block: "start" });
-      contactForm.elements.name.focus();
-    });
+    editButton.addEventListener("click", () => editContact(contact));
 
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-button";
     deleteButton.type = "button";
     deleteButton.textContent = "Borrar";
-    deleteButton.addEventListener("click", () => {
-      contacts = contacts.filter((item) => item.id !== contact.id);
-      if (editingContactId === contact.id) {
-        setFormMode();
-      }
-      saveContacts();
-      renderContacts();
-    });
+    deleteButton.addEventListener("click", () => deleteContact(contact));
 
     cardActions.append(editButton, deleteButton);
     card.append(cardActions);
@@ -248,6 +367,9 @@ clearFiltersButton.addEventListener("click", () => {
 downloadExcelButton.addEventListener("click", downloadExcel);
 cancelEditButton.addEventListener("click", () => {
   setFormMode();
+});
+document.querySelectorAll("[data-voice-target]").forEach((button) => {
+  button.addEventListener("click", () => startVoiceInput(button.dataset.voiceTarget));
 });
 
 renderContacts();

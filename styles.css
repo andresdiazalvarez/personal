@@ -99,7 +99,10 @@ h3 {
 
 .primary-action,
 .secondary-action,
-.back-button {
+.back-button,
+.voice-button,
+.edit-button,
+.delete-button {
   border: 0;
   border-radius: 8px;
   transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
@@ -116,13 +119,19 @@ h3 {
 
 .primary-action:hover,
 .back-button:hover,
-.secondary-action:hover {
+.secondary-action:hover,
+.voice-button:hover,
+.edit-button:hover,
+.delete-button:hover {
   transform: translateY(-1px);
 }
 
 .primary-action:active,
 .back-button:active,
-.secondary-action:active {
+.secondary-action:active,
+.voice-button:active,
+.edit-button:active,
+.delete-button:active {
   transform: translateY(0);
 }
 
@@ -210,6 +219,28 @@ select {
   outline-color: var(--mauve-500);
 }
 
+.input-with-voice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.voice-button {
+  min-height: 44px;
+  padding: 0 12px;
+  color: #ffffff;
+  background: var(--mauve-500);
+  font-weight: 700;
+}
+
+.voice-status {
+  min-height: 22px;
+  margin: -8px 0 22px;
+  color: var(--mauve-700);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
 .form-actions {
   grid-column: 1 / -1;
   display: flex;
@@ -229,8 +260,56 @@ select {
   color: var(--muted);
 }
 
+.data-table-section,
 .contacts-section {
   margin-top: 24px;
+}
+
+.table-count {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.contacts-table {
+  width: 100%;
+  min-width: 780px;
+  border-collapse: collapse;
+}
+
+.contacts-table th,
+.contacts-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.contacts-table th {
+  color: var(--mauve-700);
+  background: rgba(224, 201, 238, 0.58);
+}
+
+.contacts-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.contacts-table td {
+  overflow-wrap: anywhere;
+}
+
+.table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .contacts-list {
@@ -338,6 +417,10 @@ select {
     width: 100%;
   }
 
+  .input-with-voice {
+    grid-template-columns: 1fr;
+  }
+
   .contact-form,
   .tools-section,
   .contact-card {
@@ -351,7 +434,8 @@ select {
   .secondary-action,
   .back-button,
   .edit-button,
-  .delete-button {
+  .delete-button,
+  .voice-button {
     width: 100%;
   }
 }

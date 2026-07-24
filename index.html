@@ -31,11 +31,17 @@
       <form class="contact-form" id="contactForm" autocomplete="off">
         <label>
           Nombre
-          <input id="nameInput" name="name" type="text" placeholder="Nombre">
+          <span class="input-with-voice">
+            <input id="nameInput" name="name" type="text" placeholder="Nombre">
+            <button class="voice-button" type="button" data-voice-target="name" aria-label="Dictar nombre por voz">Voz</button>
+          </span>
         </label>
         <label>
           Teléfono
-          <input id="phoneInput" name="phone" type="tel" placeholder="Teléfono">
+          <span class="input-with-voice">
+            <input id="phoneInput" name="phone" type="tel" placeholder="Teléfono">
+            <button class="voice-button" type="button" data-voice-target="phone" aria-label="Dictar teléfono por voz">Voz</button>
+          </span>
         </label>
         <label>
           Correo electrónico
@@ -43,17 +49,24 @@
         </label>
         <label>
           Otros 1
-          <input id="otherOneInput" name="otherOne" type="text" placeholder="Otros 1">
+          <span class="input-with-voice">
+            <input id="otherOneInput" name="otherOne" type="text" placeholder="Otros 1">
+            <button class="voice-button" type="button" data-voice-target="otherOne" aria-label="Dictar otros 1 por voz">Voz</button>
+          </span>
         </label>
         <label>
           Otros 2
-          <input id="otherTwoInput" name="otherTwo" type="text" placeholder="Otros 2">
+          <span class="input-with-voice">
+            <input id="otherTwoInput" name="otherTwo" type="text" placeholder="Otros 2">
+            <button class="voice-button" type="button" data-voice-target="otherTwo" aria-label="Dictar otros 2 por voz">Voz</button>
+          </span>
         </label>
         <div class="form-actions">
           <button class="primary-action form-submit" id="saveButton" type="submit">Guardar</button>
           <button class="secondary-action cancel-edit-button" id="cancelEditButton" type="button" hidden>Cancelar</button>
         </div>
       </form>
+      <p class="voice-status" id="voiceStatus" aria-live="polite"></p>
 
       <section class="tools-section" aria-label="Búsqueda y filtrado">
         <div class="field-tool">
@@ -101,6 +114,14 @@
             <option value="empty">Sin otros 2</option>
           </select>
         </div>
+      </section>
+
+      <section class="data-table-section" aria-labelledby="dataTableTitle">
+        <div class="contacts-header">
+          <h3 id="dataTableTitle">Cuadro de datos</h3>
+          <p class="table-count" id="tableCount"></p>
+        </div>
+        <div class="table-wrap" id="tableWrap"></div>
       </section>
 
       <section class="contacts-section" aria-live="polite">
