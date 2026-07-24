@@ -49,7 +49,10 @@
           Otros 2
           <input id="otherTwoInput" name="otherTwo" type="text" placeholder="Otros 2">
         </label>
-        <button class="primary-action form-submit" type="submit">Guardar</button>
+        <div class="form-actions">
+          <button class="primary-action form-submit" id="saveButton" type="submit">Guardar</button>
+          <button class="secondary-action cancel-edit-button" id="cancelEditButton" type="button" hidden>Cancelar</button>
+        </div>
       </form>
 
       <section class="tools-section" aria-label="Búsqueda y filtrado">

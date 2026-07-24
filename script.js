@@ -6,6 +6,8 @@ const contactForm = document.getElementById("contactForm");
 const contactsList = document.getElementById("contactsList");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
 const downloadExcelButton = document.getElementById("downloadExcelButton");
+const saveButton = document.getElementById("saveButton");
+const cancelEditButton = document.getElementById("cancelEditButton");
 
 const fields = [
   { key: "name", label: "Nombre" },
@@ -17,6 +19,7 @@ const fields = [
 
 const storageKey = "personal-agenda-contacts";
 let contacts = JSON.parse(localStorage.getItem(storageKey) || "[]");
+let editingContactId = null;
 
 function createContactId() {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -28,6 +31,21 @@ function createContactId() {
 
 function saveContacts() {
   localStorage.setItem(storageKey, JSON.stringify(contacts));
+}
+
+function setFormMode(contact = null) {
+  editingContactId = contact ? contact.id : null;
+  saveButton.textContent = contact ? "Actualizar" : "Guardar";
+  cancelEditButton.hidden = !contact;
+
+  if (!contact) {
+    contactForm.reset();
+    return;
+  }
+
+  fields.forEach(({ key }) => {
+    contactForm.elements[key].value = contact[key] || "";
+  });
 }
 
 function showScreen(screen) {
@@ -154,17 +172,34 @@ function renderContacts() {
       card.append(field);
     });
 
+    const cardActions = document.createElement("div");
+    cardActions.className = "contact-card-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "edit-button";
+    editButton.type = "button";
+    editButton.textContent = "Modificar";
+    editButton.addEventListener("click", () => {
+      setFormMode(contact);
+      contactForm.scrollIntoView({ behavior: "smooth", block: "start" });
+      contactForm.elements.name.focus();
+    });
+
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-button";
     deleteButton.type = "button";
     deleteButton.textContent = "Borrar";
     deleteButton.addEventListener("click", () => {
       contacts = contacts.filter((item) => item.id !== contact.id);
+      if (editingContactId === contact.id) {
+        setFormMode();
+      }
       saveContacts();
       renderContacts();
     });
 
-    card.append(deleteButton);
+    cardActions.append(editButton, deleteButton);
+    card.append(cardActions);
     contactsList.append(card);
   });
 }
@@ -176,7 +211,7 @@ contactForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const formData = new FormData(contactForm);
   const contact = {
-    id: createContactId(),
+    id: editingContactId || createContactId(),
     name: formData.get("name").trim(),
     phone: formData.get("phone").trim(),
     email: formData.get("email").trim(),
@@ -184,9 +219,14 @@ contactForm.addEventListener("submit", (event) => {
     otherTwo: formData.get("otherTwo").trim()
   };
 
-  contacts.unshift(contact);
+  if (editingContactId) {
+    contacts = contacts.map((item) => (item.id === editingContactId ? contact : item));
+  } else {
+    contacts.unshift(contact);
+  }
+
   saveContacts();
-  contactForm.reset();
+  setFormMode();
   renderContacts();
 });
 
@@ -206,5 +246,8 @@ clearFiltersButton.addEventListener("click", () => {
 });
 
 downloadExcelButton.addEventListener("click", downloadExcel);
+cancelEditButton.addEventListener("click", () => {
+  setFormMode();
+});
 
 renderContacts();

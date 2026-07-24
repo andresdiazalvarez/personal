@@ -210,8 +210,11 @@ select {
   outline-color: var(--mauve-500);
 }
 
-.form-submit {
+.form-actions {
   grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-self: end;
 }
 
@@ -263,13 +266,30 @@ select {
   overflow-wrap: anywhere;
 }
 
-.delete-button {
+.contact-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.delete-button,
+.edit-button {
   min-height: 38px;
-  border: 1px solid rgba(145, 74, 95, 0.28);
   border-radius: 8px;
+  font-weight: 700;
+}
+
+.edit-button {
+  border: 1px solid var(--line);
+  color: var(--mauve-700);
+  background: var(--mauve-100);
+}
+
+.delete-button {
+  border: 1px solid rgba(145, 74, 95, 0.28);
   color: #7d3346;
   background: #f8e8ed;
-  font-weight: 700;
 }
 
 .empty-state {
@@ -292,7 +312,7 @@ select {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .delete-button {
+  .contact-card-actions {
     grid-column: 1 / -1;
   }
 }
@@ -324,10 +344,14 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .form-actions,
   .form-submit,
+  .cancel-edit-button,
   .primary-action,
   .secondary-action,
-  .back-button {
+  .back-button,
+  .edit-button,
+  .delete-button {
     width: 100%;
   }
 }
