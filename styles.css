@@ -102,7 +102,8 @@ h3 {
 .back-button,
 .voice-button,
 .edit-button,
-.delete-button {
+.delete-button,
+.call-link {
   border: 0;
   border-radius: 8px;
   transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
@@ -122,7 +123,8 @@ h3 {
 .secondary-action:hover,
 .voice-button:hover,
 .edit-button:hover,
-.delete-button:hover {
+.delete-button:hover,
+.call-link:hover {
   transform: translateY(-1px);
 }
 
@@ -131,7 +133,8 @@ h3 {
 .secondary-action:active,
 .voice-button:active,
 .edit-button:active,
-.delete-button:active {
+.delete-button:active,
+.call-link:active {
   transform: translateY(0);
 }
 
@@ -306,6 +309,13 @@ select {
   overflow-wrap: anywhere;
 }
 
+.phone-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .table-actions {
   display: flex;
   flex-wrap: wrap;
@@ -343,6 +353,20 @@ select {
 
 .contact-value {
   overflow-wrap: anywhere;
+}
+
+.call-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  width: fit-content;
+  padding: 0 10px;
+  color: #ffffff;
+  background: var(--mauve-700);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .contact-card-actions {
@@ -435,7 +459,8 @@ select {
   .back-button,
   .edit-button,
   .delete-button,
-  .voice-button {
+  .voice-button,
+  .call-link {
     width: 100%;
   }
 }

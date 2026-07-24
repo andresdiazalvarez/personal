@@ -25,6 +25,20 @@ let contacts = JSON.parse(localStorage.getItem(storageKey) || "[]");
 let editingContactId = null;
 let activeRecognition = null;
 
+const spokenPhoneNumbers = {
+  cero: "0",
+  uno: "1",
+  una: "1",
+  dos: "2",
+  tres: "3",
+  cuatro: "4",
+  cinco: "5",
+  seis: "6",
+  siete: "7",
+  ocho: "8",
+  nueve: "9"
+};
+
 function createContactId() {
   if (window.crypto && typeof window.crypto.randomUUID === "function") {
     return window.crypto.randomUUID();
@@ -104,6 +118,35 @@ function escapeExcelCell(value) {
     .replace(/"/g, "&quot;");
 }
 
+function normalizePhoneText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\b(cero|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\b/g, (match) => spokenPhoneNumbers[match])
+    .replace(/\b(mas|plus)\b/g, "+")
+    .replace(/[^\d+]/g, "");
+}
+
+function getPhoneHref(phone) {
+  const normalizedPhone = normalizePhoneText(phone);
+  return normalizedPhone ? `tel:${normalizedPhone}` : "";
+}
+
+function createCallLink(phone) {
+  const phoneHref = getPhoneHref(phone);
+
+  if (!phoneHref) {
+    return null;
+  }
+
+  const callLink = document.createElement("a");
+  callLink.className = "call-link";
+  callLink.href = phoneHref;
+  callLink.textContent = "Llamar";
+  return callLink;
+}
+
 function startVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = contactForm.elements[fieldKey];
@@ -128,7 +171,7 @@ function startVoiceInput(fieldKey) {
 
   recognition.addEventListener("result", (event) => {
     const transcript = event.results[0][0].transcript.trim();
-    input.value = fieldKey === "phone" ? transcript.replace(/\s+/g, " ") : transcript;
+    input.value = fieldKey === "phone" ? normalizePhoneText(transcript) : transcript;
     input.focus();
     voiceStatus.textContent = `${field.label} escrito por voz.`;
   });
@@ -238,7 +281,22 @@ function renderDataTable(visibleContacts) {
 
     fields.forEach(({ key }) => {
       const td = document.createElement("td");
-      td.textContent = contact[key] || "-";
+
+      if (key === "phone" && contact[key]) {
+        const phoneGroup = document.createElement("div");
+        phoneGroup.className = "phone-cell";
+        const phoneValue = document.createElement("span");
+        phoneValue.textContent = contact[key];
+        const callLink = createCallLink(contact[key]);
+        phoneGroup.append(phoneValue);
+        if (callLink) {
+          phoneGroup.append(callLink);
+        }
+        td.append(phoneGroup);
+      } else {
+        td.textContent = contact[key] || "-";
+      }
+
       row.append(td);
     });
 
@@ -299,6 +357,12 @@ function renderContacts() {
       value.textContent = contact[key] || "—";
 
       field.append(fieldLabel, value);
+      if (key === "phone") {
+        const callLink = createCallLink(contact[key]);
+        if (callLink) {
+          field.append(callLink);
+        }
+      }
       card.append(field);
     });
 
@@ -332,7 +396,7 @@ contactForm.addEventListener("submit", (event) => {
   const contact = {
     id: editingContactId || createContactId(),
     name: formData.get("name").trim(),
-    phone: formData.get("phone").trim(),
+    phone: normalizePhoneText(formData.get("phone")),
     email: formData.get("email").trim(),
     otherOne: formData.get("otherOne").trim(),
     otherTwo: formData.get("otherTwo").trim()
