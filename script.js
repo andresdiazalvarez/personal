@@ -1,7 +1,10 @@
 const homeScreen = document.getElementById("homeScreen");
 const agendaScreen = document.getElementById("agendaScreen");
+const textScreen = document.getElementById("textScreen");
 const enterButton = document.getElementById("enterButton");
+const enterTextButton = document.getElementById("enterTextButton");
 const backButton = document.getElementById("backButton");
+const textBackButton = document.getElementById("textBackButton");
 const contactForm = document.getElementById("contactForm");
 const contactsList = document.getElementById("contactsList");
 const clearFiltersButton = document.getElementById("clearFiltersButton");
@@ -12,6 +15,15 @@ const tableWrap = document.getElementById("tableWrap");
 const tableCount = document.getElementById("tableCount");
 const voiceStatus = document.getElementById("voiceStatus");
 const phoneInput = document.getElementById("phoneInput");
+const textForm = document.getElementById("textForm");
+const textDateInput = document.getElementById("textDateInput");
+const textVoiceStatus = document.getElementById("textVoiceStatus");
+const textList = document.getElementById("textList");
+const textCount = document.getElementById("textCount");
+const saveTextButton = document.getElementById("saveTextButton");
+const cancelTextEditButton = document.getElementById("cancelTextEditButton");
+const downloadWordButton = document.getElementById("downloadWordButton");
+const clearTextFiltersButton = document.getElementById("clearTextFiltersButton");
 
 const fields = [
   { key: "name", label: "Nombre" },
@@ -22,8 +34,11 @@ const fields = [
 ];
 
 const storageKey = "personal-agenda-contacts";
+const textStorageKey = "personal-text-records";
 let contacts = JSON.parse(localStorage.getItem(storageKey) || "[]");
+let textRecords = JSON.parse(localStorage.getItem(textStorageKey) || "[]");
 let editingContactId = null;
+let editingTextId = null;
 let activeRecognition = null;
 let phoneVoiceTimer = null;
 let phoneInputTimer = null;
@@ -54,6 +69,17 @@ function saveContacts() {
   localStorage.setItem(storageKey, JSON.stringify(contacts));
 }
 
+function saveTextRecords() {
+  localStorage.setItem(textStorageKey, JSON.stringify(textRecords));
+}
+
+function formatDateTime(date = new Date()) {
+  return new Intl.DateTimeFormat("es-ES", {
+    dateStyle: "short",
+    timeStyle: "short"
+  }).format(date);
+}
+
 function setFormMode(contact = null) {
   editingContactId = contact ? contact.id : null;
   saveButton.textContent = contact ? "Actualizar" : "Guardar";
@@ -69,9 +95,30 @@ function setFormMode(contact = null) {
   });
 }
 
+function setTextFormMode(record = null) {
+  editingTextId = record ? record.id : null;
+  saveTextButton.textContent = record ? "Actualizar texto" : "Guardar texto";
+  cancelTextEditButton.hidden = !record;
+
+  if (!record) {
+    textForm.reset();
+    textDateInput.value = formatDateTime();
+    return;
+  }
+
+  textForm.elements.textName.value = record.name || "";
+  textDateInput.value = record.date || "";
+  textForm.elements.redaction.value = record.redaction || "";
+}
+
 function showScreen(screen) {
   homeScreen.classList.toggle("is-active", screen === "home");
   agendaScreen.classList.toggle("is-active", screen === "agenda");
+  textScreen.classList.toggle("is-active", screen === "text");
+
+  if (screen === "text" && !editingTextId) {
+    textDateInput.value = formatDateTime();
+  }
 }
 
 function getSearchValues() {
@@ -114,6 +161,14 @@ function getVisibleContacts() {
 }
 
 function escapeExcelCell(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -261,6 +316,59 @@ function startVoiceInput(fieldKey) {
   }
 }
 
+function startTextVoiceInput(fieldKey) {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const input = textForm.elements[fieldKey];
+  const isRedaction = fieldKey === "redaction";
+
+  if (!SpeechRecognition) {
+    textVoiceStatus.textContent = "Tu navegador no permite dictado por voz. Prueba con Chrome o Edge.";
+    return;
+  }
+
+  if (activeRecognition) {
+    activeRecognition.stop();
+  }
+
+  const recognition = new SpeechRecognition();
+  activeRecognition = recognition;
+  recognition.lang = "es-ES";
+  recognition.continuous = isRedaction;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  textVoiceStatus.textContent = isRedaction ? "Escuchando redacción..." : "Escuchando nombre...";
+
+  recognition.addEventListener("result", (event) => {
+    const transcript = event.results[event.results.length - 1][0].transcript.trim();
+
+    if (isRedaction) {
+      const separator = input.value.trim() ? " " : "";
+      input.value += `${separator}${transcript}`;
+      textVoiceStatus.textContent = "Redacción añadida por voz.";
+      return;
+    }
+
+    input.value = transcript;
+    input.focus();
+    textVoiceStatus.textContent = "Nombre escrito por voz.";
+  });
+
+  recognition.addEventListener("error", () => {
+    textVoiceStatus.textContent = "No se pudo recoger la voz. Intentalo de nuevo.";
+  });
+
+  recognition.addEventListener("end", () => {
+    activeRecognition = null;
+  });
+
+  try {
+    recognition.start();
+  } catch (error) {
+    activeRecognition = null;
+    textVoiceStatus.textContent = "No se pudo iniciar el microfono. Revisa los permisos del navegador.";
+  }
+}
+
 function downloadExcel() {
   const visibleContacts = getVisibleContacts();
 
@@ -300,6 +408,68 @@ function downloadExcel() {
   URL.revokeObjectURL(url);
 }
 
+function getTextSearchValues() {
+  return Object.fromEntries(
+    [...document.querySelectorAll("[data-text-search]")].map((input) => [
+      input.dataset.textSearch,
+      input.value.trim().toLowerCase()
+    ])
+  );
+}
+
+function matchesTextFilters(record) {
+  const searches = getTextSearchValues();
+
+  return (
+    (!searches.name || (record.name || "").toLowerCase().includes(searches.name)) &&
+    (!searches.date || (record.date || "").toLowerCase().includes(searches.date)) &&
+    (!searches.redaction || (record.redaction || "").toLowerCase().includes(searches.redaction))
+  );
+}
+
+function getVisibleTextRecords() {
+  return textRecords.filter(matchesTextFilters);
+}
+
+function downloadWord() {
+  const visibleRecords = getVisibleTextRecords();
+
+  if (visibleRecords.length === 0) {
+    return;
+  }
+
+  const recordsHtml = visibleRecords
+    .map((record) => `
+      <h2>${escapeHtml(record.name || "Sin nombre")}</h2>
+      <p><strong>Fecha:</strong> ${escapeHtml(record.date)}</p>
+      <p>${escapeHtml(record.redaction).replace(/\n/g, "<br>")}</p>
+      <hr>
+    `)
+    .join("");
+  const wordHtml = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Textos PERSONAL</title>
+</head>
+<body>
+  <h1>Textos PERSONAL</h1>
+  ${recordsHtml}
+</body>
+</html>`;
+  const blob = new Blob([wordHtml], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+
+  link.href = url;
+  link.download = `personal-textos-${date}.doc`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function deleteContact(contact) {
   contacts = contacts.filter((item) => item.id !== contact.id);
   if (editingContactId === contact.id) {
@@ -313,6 +483,72 @@ function editContact(contact) {
   setFormMode(contact);
   contactForm.scrollIntoView({ behavior: "smooth", block: "start" });
   contactForm.elements.name.focus();
+}
+
+function deleteTextRecord(record) {
+  textRecords = textRecords.filter((item) => item.id !== record.id);
+  if (editingTextId === record.id) {
+    setTextFormMode();
+  }
+  saveTextRecords();
+  renderTextRecords();
+}
+
+function editTextRecord(record) {
+  setTextFormMode(record);
+  textForm.scrollIntoView({ behavior: "smooth", block: "start" });
+  textForm.elements.textName.focus();
+}
+
+function renderTextRecords() {
+  const visibleRecords = getVisibleTextRecords();
+  textList.innerHTML = "";
+  textCount.textContent = `${visibleRecords.length} texto${visibleRecords.length === 1 ? "" : "s"}`;
+  downloadWordButton.disabled = visibleRecords.length === 0;
+
+  if (visibleRecords.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = textRecords.length === 0 ? "No hay textos guardados." : "No hay textos con esos filtros.";
+    textList.append(empty);
+    return;
+  }
+
+  visibleRecords.forEach((record) => {
+    const item = document.createElement("article");
+    item.className = "text-record-card";
+
+    const header = document.createElement("div");
+    header.className = "text-record-header";
+    const title = document.createElement("h4");
+    title.textContent = record.name || "Sin nombre";
+    const date = document.createElement("span");
+    date.textContent = record.date || "";
+    header.append(title, date);
+
+    const redaction = document.createElement("p");
+    redaction.className = "text-record-redaction";
+    redaction.textContent = record.redaction || "";
+
+    const actions = document.createElement("div");
+    actions.className = "contact-card-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "edit-button";
+    editButton.type = "button";
+    editButton.textContent = "Modificar";
+    editButton.addEventListener("click", () => editTextRecord(record));
+
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "delete-button";
+    deleteButton.type = "button";
+    deleteButton.textContent = "Borrar";
+    deleteButton.addEventListener("click", () => deleteTextRecord(record));
+
+    actions.append(editButton, deleteButton);
+    item.append(header, redaction, actions);
+    textList.append(item);
+  });
 }
 
 function renderDataTable(visibleContacts) {
@@ -459,7 +695,9 @@ function renderContacts() {
 }
 
 enterButton.addEventListener("click", () => showScreen("agenda"));
+enterTextButton.addEventListener("click", () => showScreen("text"));
 backButton.addEventListener("click", () => showScreen("home"));
+textBackButton.addEventListener("click", () => showScreen("home"));
 
 contactForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -484,6 +722,27 @@ contactForm.addEventListener("submit", (event) => {
   renderContacts();
 });
 
+textForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const formData = new FormData(textForm);
+  const record = {
+    id: editingTextId || createContactId(),
+    name: formData.get("textName").trim(),
+    date: textDateInput.value || formatDateTime(),
+    redaction: formData.get("redaction").trim()
+  };
+
+  if (editingTextId) {
+    textRecords = textRecords.map((item) => (item.id === editingTextId ? record : item));
+  } else {
+    textRecords.unshift(record);
+  }
+
+  saveTextRecords();
+  setTextFormMode();
+  renderTextRecords();
+});
+
 document.querySelectorAll("[data-search], [data-filter]").forEach((control) => {
   control.addEventListener("input", renderContacts);
   control.addEventListener("change", renderContacts);
@@ -500,11 +759,27 @@ clearFiltersButton.addEventListener("click", () => {
 });
 
 downloadExcelButton.addEventListener("click", downloadExcel);
+downloadWordButton.addEventListener("click", downloadWord);
 cancelEditButton.addEventListener("click", () => {
   setFormMode();
 });
+cancelTextEditButton.addEventListener("click", () => {
+  setTextFormMode();
+});
 document.querySelectorAll("[data-voice-target]").forEach((button) => {
   button.addEventListener("click", () => startVoiceInput(button.dataset.voiceTarget));
+});
+document.querySelectorAll("[data-text-voice-target]").forEach((button) => {
+  button.addEventListener("click", () => startTextVoiceInput(button.dataset.textVoiceTarget));
+});
+document.querySelectorAll("[data-text-search]").forEach((input) => {
+  input.addEventListener("input", renderTextRecords);
+});
+clearTextFiltersButton.addEventListener("click", () => {
+  document.querySelectorAll("[data-text-search]").forEach((input) => {
+    input.value = "";
+  });
+  renderTextRecords();
 });
 
 phoneInput.addEventListener("input", () => {
@@ -518,4 +793,6 @@ phoneInput.addEventListener("input", () => {
   }, 3000);
 });
 
+setTextFormMode();
 renderContacts();
+renderTextRecords();
