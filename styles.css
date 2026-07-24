@@ -268,6 +268,18 @@ select {
   margin-top: 24px;
 }
 
+.data-table-section {
+  padding: 18px;
+  border: 1px solid rgba(77, 45, 97, 0.42);
+  border-radius: 8px;
+  background: rgba(77, 45, 97, 0.86);
+}
+
+.data-table-section h3,
+.data-table-section .table-count {
+  color: #ffffff;
+}
+
 .table-count {
   margin: 0;
   color: var(--muted);
@@ -277,28 +289,30 @@ select {
 .table-wrap {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 222, 182, 0.68);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.74);
+  background: #ffe6c2;
 }
 
 .contacts-table {
   width: 100%;
-  min-width: 780px;
+  min-width: 1180px;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .contacts-table th,
 .contacts-table td {
   padding: 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(77, 45, 97, 0.18);
   text-align: left;
   vertical-align: top;
+  background: #fff0d9;
 }
 
 .contacts-table th {
   color: var(--mauve-700);
-  background: rgba(224, 201, 238, 0.58);
+  background: #ffd9a1;
 }
 
 .contacts-table tr:last-child td {
@@ -307,6 +321,28 @@ select {
 
 .contacts-table td {
   overflow-wrap: anywhere;
+}
+
+.contacts-table .table-column-name {
+  width: 150px;
+}
+
+.contacts-table .table-column-phone {
+  width: 145px;
+}
+
+.contacts-table .table-column-email {
+  width: 190px;
+}
+
+.contacts-table .table-column-otherOne,
+.contacts-table .table-column-otherTwo {
+  width: 285px;
+}
+
+.contacts-table th:last-child,
+.contacts-table td:last-child {
+  width: 125px;
 }
 
 .phone-cell {
@@ -429,6 +465,14 @@ select {
   .home-screen,
   .agenda-screen {
     padding: 18px;
+  }
+
+  .data-table-section {
+    padding: 14px;
+  }
+
+  .contacts-table {
+    min-width: 1040px;
   }
 
   .agenda-header,

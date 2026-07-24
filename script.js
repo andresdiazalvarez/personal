@@ -11,6 +11,7 @@ const cancelEditButton = document.getElementById("cancelEditButton");
 const tableWrap = document.getElementById("tableWrap");
 const tableCount = document.getElementById("tableCount");
 const voiceStatus = document.getElementById("voiceStatus");
+const phoneInput = document.getElementById("phoneInput");
 
 const fields = [
   { key: "name", label: "Nombre" },
@@ -25,6 +26,7 @@ let contacts = JSON.parse(localStorage.getItem(storageKey) || "[]");
 let editingContactId = null;
 let activeRecognition = null;
 let phoneVoiceTimer = null;
+let phoneInputTimer = null;
 
 const spokenPhoneNumbers = {
   cero: "0",
@@ -148,6 +150,16 @@ function createCallLink(phone) {
   return callLink;
 }
 
+function finishPhoneVoiceInput(input, recognition, transcriptParts) {
+  input.value = normalizePhoneText(transcriptParts.filter(Boolean).join(" "));
+  voiceStatus.textContent = "Telefono escrito por voz.";
+  phoneVoiceTimer = null;
+
+  if (activeRecognition === recognition) {
+    recognition.stop();
+  }
+}
+
 function startVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = contactForm.elements[fieldKey];
@@ -166,6 +178,10 @@ function startVoiceInput(fieldKey) {
     clearTimeout(phoneVoiceTimer);
     phoneVoiceTimer = null;
   }
+  if (phoneInputTimer) {
+    clearTimeout(phoneInputTimer);
+    phoneInputTimer = null;
+  }
 
   const recognition = new SpeechRecognition();
   const field = fields.find((item) => item.key === fieldKey);
@@ -178,18 +194,18 @@ function startVoiceInput(fieldKey) {
   voiceStatus.textContent = isPhoneField
     ? "Escuchando telefono... espera 3 segundos al terminar."
     : `Escuchando ${field.label.toLowerCase()}...`;
+  if (isPhoneField) {
+    input.blur();
+  }
 
   recognition.addEventListener("result", (event) => {
     if (isPhoneField) {
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        if (event.results[index].isFinal) {
-          phoneTranscriptParts.push(event.results[index][0].transcript.trim());
-        }
+      for (let index = 0; index < event.results.length; index += 1) {
+        phoneTranscriptParts[index] = event.results[index][0].transcript.trim();
       }
 
-      const phoneText = normalizePhoneText(phoneTranscriptParts.join(" "));
+      const phoneText = normalizePhoneText(phoneTranscriptParts.filter(Boolean).join(" "));
       input.value = phoneText;
-      input.focus();
       voiceStatus.textContent = "Recogiendo telefono... lo guardo cuando pasen 3 segundos de silencio.";
 
       if (phoneVoiceTimer) {
@@ -197,12 +213,7 @@ function startVoiceInput(fieldKey) {
       }
 
       phoneVoiceTimer = setTimeout(() => {
-        input.value = normalizePhoneText(phoneTranscriptParts.join(" "));
-        voiceStatus.textContent = "Telefono escrito por voz.";
-        phoneVoiceTimer = null;
-        if (activeRecognition === recognition) {
-          recognition.stop();
-        }
+        finishPhoneVoiceInput(input, recognition, phoneTranscriptParts);
       }, 3000);
       return;
     }
@@ -219,7 +230,7 @@ function startVoiceInput(fieldKey) {
 
   recognition.addEventListener("end", () => {
     if (isPhoneField) {
-      input.value = normalizePhoneText(phoneTranscriptParts.join(" "));
+      input.value = normalizePhoneText(phoneTranscriptParts.filter(Boolean).join(" "));
     }
     if (!isPhoneField && phoneVoiceTimer) {
       clearTimeout(phoneVoiceTimer);
@@ -307,9 +318,10 @@ function renderDataTable(visibleContacts) {
 
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  fields.forEach(({ label }) => {
+  fields.forEach(({ key, label }) => {
     const th = document.createElement("th");
     th.scope = "col";
+    th.className = `table-column-${key}`;
     th.textContent = label;
     headerRow.append(th);
   });
@@ -325,6 +337,7 @@ function renderDataTable(visibleContacts) {
 
     fields.forEach(({ key }) => {
       const td = document.createElement("td");
+      td.className = `table-column-${key}`;
 
       if (key === "phone" && contact[key]) {
         const phoneGroup = document.createElement("div");
@@ -478,6 +491,17 @@ cancelEditButton.addEventListener("click", () => {
 });
 document.querySelectorAll("[data-voice-target]").forEach((button) => {
   button.addEventListener("click", () => startVoiceInput(button.dataset.voiceTarget));
+});
+
+phoneInput.addEventListener("input", () => {
+  if (phoneInputTimer) {
+    clearTimeout(phoneInputTimer);
+  }
+
+  phoneInputTimer = setTimeout(() => {
+    phoneInput.value = normalizePhoneText(phoneInput.value);
+    phoneInputTimer = null;
+  }, 3000);
 });
 
 renderContacts();
