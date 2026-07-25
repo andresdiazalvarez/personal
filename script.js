@@ -21,6 +21,7 @@ const textVoiceStatus = document.getElementById("textVoiceStatus");
 const textList = document.getElementById("textList");
 const textCount = document.getElementById("textCount");
 const saveTextButton = document.getElementById("saveTextButton");
+const newTextButton = document.getElementById("newTextButton");
 const cancelTextEditButton = document.getElementById("cancelTextEditButton");
 const downloadWordButton = document.getElementById("downloadWordButton");
 const clearTextFiltersButton = document.getElementById("clearTextFiltersButton");
@@ -262,6 +263,11 @@ function appendDictatedText(input, transcript) {
   input.value = `${currentValue}${needsSpace ? " " : ""}${cleanTranscript}`;
 }
 
+function addEndingPeriod(value) {
+  const cleanValue = value.trim().replace(/[.,;:!?]+$/g, "");
+  return cleanValue ? `${cleanValue}.` : "";
+}
+
 function startVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = contactForm.elements[fieldKey];
@@ -336,10 +342,13 @@ function startVoiceInput(fieldKey) {
       }
 
       processedResultIndexes.add(index);
-      appendDictatedText(input, event.results[index][0].transcript);
+      const transcript = isRedaction ? addEndingPeriod(event.results[index][0].transcript) : event.results[index][0].transcript;
+      appendDictatedText(input, transcript);
     }
 
-    input.focus();
+    if (!isRedaction) {
+      input.focus();
+    }
     voiceStatus.textContent = `${field.label} escrito por voz. Esperando 10 segundos de silencio.`;
     waitForTextSilence(recognition, voiceStatus, `${field.label} escrito por voz.`);
   });
@@ -414,10 +423,13 @@ function startTextVoiceInput(fieldKey) {
       }
 
       processedResultIndexes.add(index);
-      appendDictatedText(input, event.results[index][0].transcript);
+      const transcript = isRedaction ? addEndingPeriod(event.results[index][0].transcript) : event.results[index][0].transcript;
+      appendDictatedText(input, transcript);
     }
 
-    input.focus();
+    if (!isRedaction) {
+      input.focus();
+    }
     textVoiceStatus.textContent = isRedaction
       ? "Redacción añadida por voz. Esperando 10 segundos de silencio."
       : "Nombre escrito por voz. Esperando 10 segundos de silencio.";
@@ -829,9 +841,36 @@ textForm.addEventListener("submit", (event) => {
     textRecords = textRecords.map((item) => (item.id === editingTextId ? record : item));
   } else {
     textRecords.unshift(record);
+    editingTextId = record.id;
   }
 
   saveTextRecords();
+  renderTextRecords();
+});
+
+newTextButton.addEventListener("click", () => {
+  const formData = new FormData(textForm);
+  const hasText =
+    formData.get("textName").trim() ||
+    formData.get("redaction").trim();
+
+  if (hasText) {
+    const record = {
+      id: editingTextId || createContactId(),
+      name: formData.get("textName").trim(),
+      date: textDateInput.value || formatDateTime(),
+      redaction: formData.get("redaction").trim()
+    };
+
+    if (editingTextId) {
+      textRecords = textRecords.map((item) => (item.id === editingTextId ? record : item));
+    } else {
+      textRecords.unshift(record);
+    }
+
+    saveTextRecords();
+  }
+
   setTextFormMode();
   renderTextRecords();
 });

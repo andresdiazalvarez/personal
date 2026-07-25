@@ -85,10 +85,7 @@ button {
 
 .home-action-text {
   order: 1;
-  color: #ffffff;
-  background: linear-gradient(135deg, #ff5fa8, #f69bd0);
   font-size: 1.5rem;
-  box-shadow: 0 16px 34px rgba(211, 60, 137, 0.26);
 }
 
 .home-action-agenda {
@@ -214,6 +211,12 @@ h3 {
   font-weight: 700;
 }
 
+.secondary-action.home-action-text {
+  color: #ffffff;
+  background: #4f7dff;
+  box-shadow: 0 16px 34px rgba(34, 91, 209, 0.24);
+}
+
 .back-button {
   display: inline-flex;
   align-items: center;
@@ -278,7 +281,8 @@ textarea {
 .redaction-field,
 .text-date-field,
 .text-name-entry,
-.text-command-row {
+.text-command-row,
+.new-text-button {
   grid-column: 1 / -1;
 }
 
@@ -309,19 +313,24 @@ textarea {
 .redaction-voice-button,
 .save-text-main-button {
   width: 100%;
-  min-height: 176px;
+  min-height: 212px;
   padding: 0 18px;
   font-size: 1.18rem;
   white-space: normal;
 }
 
-.redaction-voice-button {
+.voice-button.redaction-voice-button,
+.primary-action.save-text-main-button {
   background: #ff7a00;
 }
 
-.save-text-main-button {
-  background: #12a538;
-  box-shadow: 0 12px 28px rgba(18, 165, 56, 0.24);
+.primary-action.save-text-main-button {
+  box-shadow: 0 12px 28px rgba(255, 122, 0, 0.24);
+}
+
+.new-text-button {
+  min-height: 56px;
+  justify-self: stretch;
 }
 
 .input-with-voice {
