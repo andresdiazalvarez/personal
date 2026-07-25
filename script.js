@@ -263,9 +263,13 @@ function appendDictatedText(input, transcript) {
   input.value = `${currentValue}${needsSpace ? " " : ""}${cleanTranscript}`;
 }
 
-function addEndingPeriod(value) {
+function capitalizeFirstLetter(value) {
+  return value.replace(/^(\s*)([a-záéíóúüñ])/i, (match, space, letter) => `${space}${letter.toUpperCase()}`);
+}
+
+function formatRedactionTranscript(value) {
   const cleanValue = value.trim().replace(/[.,;:!?]+$/g, "");
-  return cleanValue ? `${cleanValue}.` : "";
+  return cleanValue ? `${capitalizeFirstLetter(cleanValue)}.` : "";
 }
 
 function startVoiceInput(fieldKey) {
@@ -342,13 +346,9 @@ function startVoiceInput(fieldKey) {
       }
 
       processedResultIndexes.add(index);
-      const transcript = isRedaction ? addEndingPeriod(event.results[index][0].transcript) : event.results[index][0].transcript;
-      appendDictatedText(input, transcript);
+      appendDictatedText(input, event.results[index][0].transcript);
     }
 
-    if (!isRedaction) {
-      input.focus();
-    }
     voiceStatus.textContent = `${field.label} escrito por voz. Esperando 10 segundos de silencio.`;
     waitForTextSilence(recognition, voiceStatus, `${field.label} escrito por voz.`);
   });
@@ -423,13 +423,10 @@ function startTextVoiceInput(fieldKey) {
       }
 
       processedResultIndexes.add(index);
-      const transcript = isRedaction ? addEndingPeriod(event.results[index][0].transcript) : event.results[index][0].transcript;
+      const transcript = isRedaction ? formatRedactionTranscript(event.results[index][0].transcript) : event.results[index][0].transcript;
       appendDictatedText(input, transcript);
     }
 
-    if (!isRedaction) {
-      input.focus();
-    }
     textVoiceStatus.textContent = isRedaction
       ? "Redacción añadida por voz. Esperando 10 segundos de silencio."
       : "Nombre escrito por voz. Esperando 10 segundos de silencio.";

@@ -319,13 +319,13 @@ textarea {
   white-space: normal;
 }
 
-.voice-button.redaction-voice-button,
-.primary-action.save-text-main-button {
+.voice-button.redaction-voice-button {
   background: #ff7a00;
 }
 
 .primary-action.save-text-main-button {
-  box-shadow: 0 12px 28px rgba(255, 122, 0, 0.24);
+  background: #12a538;
+  box-shadow: 0 12px 28px rgba(18, 165, 56, 0.24);
 }
 
 .new-text-button {
