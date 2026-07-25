@@ -146,32 +146,30 @@
           Volver
         </button>
         <div>
-          <p class="app-name">PERSONAL</p>
           <h2 id="textTitle">Texto</h2>
         </div>
       </header>
 
       <form class="text-form" id="textForm" autocomplete="off">
-        <label>
-          Nombre
-          <span class="input-with-voice">
+        <div class="text-name-entry">
+          <button class="voice-button text-name-voice-button" type="button" data-text-voice-target="textName" aria-label="Dictar nombre por voz">Voz nombre</button>
+          <label class="text-name-field">
             <input id="textNameInput" name="textName" type="text" placeholder="Nombre">
-            <button class="voice-button text-name-voice-button" type="button" data-text-voice-target="textName" aria-label="Dictar nombre por voz">Voz</button>
-          </span>
+          </label>
+        </div>
+        <div class="text-command-row">
+          <button class="voice-button redaction-voice-button" type="button" data-text-voice-target="redaction" aria-label="Dictar redacción por voz">Voz redacción</button>
+          <button class="primary-action save-text-main-button" id="saveTextButton" type="submit">Guardar texto</button>
+        </div>
+        <label class="redaction-field">
+          Redacción
+          <textarea id="redactionInput" name="redaction" rows="12" placeholder="Redacción"></textarea>
         </label>
-        <label>
+        <label class="text-date-field">
           Fecha
           <input id="textDateInput" name="textDate" type="text" readonly>
         </label>
-        <label class="redaction-field">
-          Redacción
-          <span class="textarea-with-voice">
-            <textarea id="redactionInput" name="redaction" rows="12" placeholder="Redacción"></textarea>
-            <button class="voice-button redaction-voice-button" type="button" data-text-voice-target="redaction" aria-label="Dictar redacción por voz">Voz</button>
-          </span>
-        </label>
-        <div class="form-actions">
-          <button class="primary-action form-submit" id="saveTextButton" type="submit">Guardar texto</button>
+        <div class="form-actions text-secondary-actions">
           <button class="secondary-action cancel-edit-button" id="cancelTextEditButton" type="button" hidden>Cancelar</button>
         </div>
       </form>
