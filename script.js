@@ -247,9 +247,9 @@ function waitForTextSilence(recognition, statusElement, message) {
 }
 
 function appendDictatedText(input, transcript) {
-  const cleanTranscript = transcript.trim();
+  const cleanTranscript = transcript.trimStart();
 
-  if (!cleanTranscript) {
+  if (!cleanTranscript.trim()) {
     return;
   }
 
@@ -265,6 +265,33 @@ function appendDictatedText(input, transcript) {
 
 function capitalizeFirstLetter(value) {
   return value.replace(/^(\s*)([a-záéíóúüñ])/i, (match, space, letter) => `${space}${letter.toUpperCase()}`);
+}
+
+function ensurePeriodBeforeParagraph(value) {
+  const trimmedValue = value.trimEnd();
+
+  if (!trimmedValue) {
+    return "";
+  }
+
+  return /[.!?]$/.test(trimmedValue) ? trimmedValue : `${trimmedValue}.`;
+}
+
+function appendRedactionTranscript(input, transcript) {
+  const makesNewParagraph = /\baparte[\s.,;:!?]*$/i.test(transcript);
+  let cleanValue = makesNewParagraph
+    ? transcript.replace(/\baparte[\s.,;:!?]*$/i, "")
+    : transcript;
+
+  cleanValue = cleanValue.trim().replace(/[.,;:!?]+$/g, "");
+
+  if (cleanValue) {
+    appendDictatedText(input, `${capitalizeFirstLetter(cleanValue)}.`);
+  }
+
+  if (makesNewParagraph) {
+    input.value = `${ensurePeriodBeforeParagraph(input.value)}\n\n`;
+  }
 }
 
 function formatRedactionTranscript(value) {
@@ -423,8 +450,11 @@ function startTextVoiceInput(fieldKey) {
       }
 
       processedResultIndexes.add(index);
-      const transcript = isRedaction ? formatRedactionTranscript(event.results[index][0].transcript) : event.results[index][0].transcript;
-      appendDictatedText(input, transcript);
+      if (isRedaction) {
+        appendRedactionTranscript(input, event.results[index][0].transcript);
+      } else {
+        appendDictatedText(input, event.results[index][0].transcript);
+      }
     }
 
     textVoiceStatus.textContent = isRedaction
