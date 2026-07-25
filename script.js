@@ -25,6 +25,10 @@ const newTextButton = document.getElementById("newTextButton");
 const cancelTextEditButton = document.getElementById("cancelTextEditButton");
 const downloadWordButton = document.getElementById("downloadWordButton");
 const clearTextFiltersButton = document.getElementById("clearTextFiltersButton");
+const textCameraInput = document.getElementById("textCameraInput");
+const textGalleryInput = document.getElementById("textGalleryInput");
+const textPhotoPreview = document.getElementById("textPhotoPreview");
+const textPhotoStatus = document.getElementById("textPhotoStatus");
 
 const fields = [
   { key: "name", label: "Nombre" },
@@ -45,8 +49,10 @@ let phoneVoiceTimer = null;
 let phoneInputTimer = null;
 let textVoiceTimer = null;
 let textVoiceStopRequested = false;
+let currentTextPhotos = [];
 
 const textDictationSilenceMs = 10000;
+const maxTextPhotos = 4;
 
 const spokenPhoneNumbers = {
   cero: "0",
@@ -78,6 +84,106 @@ function saveTextRecords() {
   localStorage.setItem(textStorageKey, JSON.stringify(textRecords));
 }
 
+function updateTextPhotoStatus(message = "") {
+  const remainingPhotos = maxTextPhotos - currentTextPhotos.length;
+  textPhotoStatus.textContent = message || `${currentTextPhotos.length} foto${currentTextPhotos.length === 1 ? "" : "s"} cargada${currentTextPhotos.length === 1 ? "" : "s"}. Puedes añadir ${remainingPhotos} más.`;
+}
+
+function renderTextPhotoPreview() {
+  textPhotoPreview.innerHTML = "";
+
+  if (currentTextPhotos.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "photo-empty";
+    empty.textContent = "Sin fotos cargadas.";
+    textPhotoPreview.append(empty);
+    updateTextPhotoStatus("Puedes cargar hasta 4 fotos.");
+    return;
+  }
+
+  currentTextPhotos.forEach((photo, index) => {
+    const item = document.createElement("div");
+    item.className = "photo-preview-item";
+
+    const image = document.createElement("img");
+    image.src = photo.dataUrl;
+    image.alt = photo.name || `Foto ${index + 1}`;
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.textContent = "Quitar";
+    removeButton.addEventListener("click", () => {
+      currentTextPhotos = currentTextPhotos.filter((_, photoIndex) => photoIndex !== index);
+      renderTextPhotoPreview();
+    });
+
+    item.append(image, removeButton);
+    textPhotoPreview.append(item);
+  });
+
+  updateTextPhotoStatus();
+}
+
+function readImageAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", reject);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function resizePhoto(file) {
+  const originalDataUrl = await readImageAsDataUrl(file);
+  const image = new Image();
+
+  await new Promise((resolve, reject) => {
+    image.addEventListener("load", resolve, { once: true });
+    image.addEventListener("error", reject, { once: true });
+    image.src = originalDataUrl;
+  });
+
+  const maxSize = 900;
+  const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  return {
+    id: createContactId(),
+    name: file.name || "foto.jpg",
+    dataUrl: canvas.toDataURL("image/jpeg", 0.72)
+  };
+}
+
+async function addTextPhotos(files) {
+  const availableSlots = maxTextPhotos - currentTextPhotos.length;
+  const imageFiles = [...files].filter((file) => file.type.startsWith("image/")).slice(0, availableSlots);
+
+  if (availableSlots <= 0) {
+    updateTextPhotoStatus("Ya hay 4 fotos cargadas. Quita una para añadir otra.");
+    return;
+  }
+
+  if (imageFiles.length === 0) {
+    updateTextPhotoStatus("No se ha seleccionado ninguna imagen.");
+    return;
+  }
+
+  textPhotoStatus.textContent = "Preparando fotos...";
+
+  try {
+    const resizedPhotos = await Promise.all(imageFiles.map(resizePhoto));
+    currentTextPhotos = [...currentTextPhotos, ...resizedPhotos].slice(0, maxTextPhotos);
+    renderTextPhotoPreview();
+  } catch (error) {
+    updateTextPhotoStatus("No se pudo cargar alguna foto. Prueba con otra imagen.");
+  }
+}
+
 function formatDateTime(date = new Date()) {
   return new Intl.DateTimeFormat("es-ES", {
     dateStyle: "short",
@@ -107,6 +213,8 @@ function setTextFormMode(record = null) {
 
   if (!record) {
     textForm.reset();
+    currentTextPhotos = [];
+    renderTextPhotoPreview();
     textDateInput.value = formatDateTime();
     return;
   }
@@ -114,6 +222,8 @@ function setTextFormMode(record = null) {
   textForm.elements.textName.value = record.name || "";
   textDateInput.value = record.date || "";
   textForm.elements.redaction.value = record.redaction || "";
+  currentTextPhotos = Array.isArray(record.photos) ? [...record.photos].slice(0, maxTextPhotos) : [];
+  renderTextPhotoPreview();
 }
 
 function showScreen(screen) {
@@ -292,11 +402,6 @@ function appendRedactionTranscript(input, transcript) {
   if (makesNewParagraph) {
     input.value = `${ensurePeriodBeforeParagraph(input.value)}\n\n`;
   }
-}
-
-function formatRedactionTranscript(value) {
-  const cleanValue = value.trim().replace(/[.,;:!?]+$/g, "");
-  return cleanValue ? `${capitalizeFirstLetter(cleanValue)}.` : "";
 }
 
 function startVoiceInput(fieldKey) {
@@ -571,12 +676,19 @@ function downloadWord() {
   }
 
   const recordsHtml = visibleRecords
-    .map((record) => `
-      <h2>${escapeHtml(record.name || "Sin nombre")}</h2>
-      <p><strong>Fecha:</strong> ${escapeHtml(record.date)}</p>
-      <p>${escapeHtml(record.redaction).replace(/\n/g, "<br>")}</p>
-      <hr>
-    `)
+    .map((record) => {
+      const photosHtml = (record.photos || [])
+        .map((photo) => `<img src="${photo.dataUrl}" alt="${escapeHtml(photo.name || "Foto")}" style="max-width: 320px; height: auto; margin: 8px 8px 8px 0;">`)
+        .join("");
+
+      return `
+        <h2>${escapeHtml(record.name || "Sin nombre")}</h2>
+        <p><strong>Fecha:</strong> ${escapeHtml(record.date)}</p>
+        <p>${escapeHtml(record.redaction).replace(/\n/g, "<br>")}</p>
+        ${photosHtml ? `<div>${photosHtml}</div>` : ""}
+        <hr>
+      `;
+    })
     .join("");
   const wordHtml = `<!doctype html>
 <html>
@@ -662,6 +774,15 @@ function renderTextRecords() {
     redaction.className = "text-record-redaction";
     redaction.textContent = record.redaction || "";
 
+    const photos = document.createElement("div");
+    photos.className = "text-record-photos";
+    (record.photos || []).forEach((photo, index) => {
+      const image = document.createElement("img");
+      image.src = photo.dataUrl;
+      image.alt = photo.name || `Foto ${index + 1}`;
+      photos.append(image);
+    });
+
     const actions = document.createElement("div");
     actions.className = "contact-card-actions";
 
@@ -678,7 +799,11 @@ function renderTextRecords() {
     deleteButton.addEventListener("click", () => deleteTextRecord(record));
 
     actions.append(editButton, deleteButton);
-    item.append(header, redaction, actions);
+    item.append(header, redaction);
+    if ((record.photos || []).length > 0) {
+      item.append(photos);
+    }
+    item.append(actions);
     textList.append(item);
   });
 }
@@ -861,7 +986,8 @@ textForm.addEventListener("submit", (event) => {
     id: editingTextId || createContactId(),
     name: formData.get("textName").trim(),
     date: textDateInput.value || formatDateTime(),
-    redaction: formData.get("redaction").trim()
+    redaction: formData.get("redaction").trim(),
+    photos: [...currentTextPhotos]
   };
 
   if (editingTextId) {
@@ -879,14 +1005,16 @@ newTextButton.addEventListener("click", () => {
   const formData = new FormData(textForm);
   const hasText =
     formData.get("textName").trim() ||
-    formData.get("redaction").trim();
+    formData.get("redaction").trim() ||
+    currentTextPhotos.length > 0;
 
   if (hasText) {
     const record = {
       id: editingTextId || createContactId(),
       name: formData.get("textName").trim(),
       date: textDateInput.value || formatDateTime(),
-      redaction: formData.get("redaction").trim()
+      redaction: formData.get("redaction").trim(),
+      photos: [...currentTextPhotos]
     };
 
     if (editingTextId) {
@@ -931,6 +1059,12 @@ document.querySelectorAll("[data-voice-target]").forEach((button) => {
 document.querySelectorAll("[data-text-voice-target]").forEach((button) => {
   button.addEventListener("click", () => startTextVoiceInput(button.dataset.textVoiceTarget));
 });
+[textCameraInput, textGalleryInput].forEach((input) => {
+  input.addEventListener("change", async () => {
+    await addTextPhotos(input.files);
+    input.value = "";
+  });
+});
 document.querySelectorAll("[data-text-search]").forEach((input) => {
   input.addEventListener("input", renderTextRecords);
 });
@@ -955,3 +1089,9 @@ phoneInput.addEventListener("input", () => {
 setTextFormMode();
 renderContacts();
 renderTextRecords();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}

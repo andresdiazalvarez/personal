@@ -19,6 +19,7 @@ App web sencilla de agenda personal con diseño malva claro.
 - Cuadro de datos filtrable con acciones para modificar y borrar.
 - Descarga de contactos visibles en formato Excel.
 - Guardado local en el navegador.
+- Instalable como app `memoria` con icono verde y naranja.
 - Preparada para GitHub Pages.
 
 ## Publicar en GitHub Pages

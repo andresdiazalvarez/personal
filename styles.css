@@ -282,6 +282,7 @@ textarea {
 .text-date-field,
 .text-name-entry,
 .text-command-row,
+.text-photos-field,
 .new-text-button {
   grid-column: 1 / -1;
 }
@@ -326,6 +327,76 @@ textarea {
 .primary-action.save-text-main-button {
   background: #12a538;
   box-shadow: 0 12px 28px rgba(18, 165, 56, 0.24);
+}
+
+.text-photos-field {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(77, 45, 97, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 240, 217, 0.82);
+}
+
+.text-photos-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.photo-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--mauve-500);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.text-photo-preview,
+.text-record-photos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.photo-preview-item {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(77, 45, 97, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.photo-preview-item img,
+.text-record-photos img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.photo-preview-item button {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  min-height: 30px;
+  padding: 0 8px;
+  color: #ffffff;
+  background: rgba(125, 51, 70, 0.92);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.photo-empty,
+.photo-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
 }
 
 .new-text-button {
@@ -517,6 +588,10 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.text-record-photos {
+  grid-template-columns: repeat(4, minmax(72px, 1fr));
+}
+
 .contact-card {
   display: grid;
   grid-template-columns: 1.25fr repeat(4, minmax(0, 1fr)) auto;
@@ -664,6 +739,11 @@ textarea {
 
   .input-with-voice {
     grid-template-columns: 1fr;
+  }
+
+  .text-photo-preview,
+  .text-record-photos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .contact-form,

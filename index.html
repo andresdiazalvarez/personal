@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PERSONAL</title>
+  <meta name="theme-color" content="#16a34a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="memoria">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -165,6 +171,16 @@
           Redacción
           <textarea id="redactionInput" name="redaction" rows="12" placeholder="Redacción"></textarea>
         </label>
+        <section class="text-photos-field" aria-label="Fotos del texto">
+          <div class="text-photos-actions">
+            <label class="photo-action-button" for="textCameraInput">Hacer foto</label>
+            <label class="photo-action-button" for="textGalleryInput">Cargar fotos</label>
+          </div>
+          <input id="textCameraInput" type="file" accept="image/*" capture="environment" hidden>
+          <input id="textGalleryInput" type="file" accept="image/*" multiple hidden>
+          <div class="text-photo-preview" id="textPhotoPreview" aria-live="polite"></div>
+          <p class="photo-status" id="textPhotoStatus">Puedes cargar hasta 4 fotos.</p>
+        </section>
         <button class="secondary-action new-text-button" id="newTextButton" type="button">Nuevo</button>
         <label class="text-date-field">
           Fecha
