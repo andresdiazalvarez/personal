@@ -11,7 +11,7 @@ App web sencilla de agenda personal con diseño malva claro.
 - Enlace directo para llamar a los telefonos guardados.
 - Modificacion de contactos guardados.
 - Pantalla de textos con nombre, fecha automatica y redaccion larga.
-- Dictado por voz para nombre y redaccion.
+- Dictado por voz para nombre y redaccion, con cierre tras 10 segundos de silencio y continuacion acumulada.
 - Filtros por palabra para nombre, fecha y redaccion.
 - Exportacion de textos visibles a Word.
 - Busqueda independiente por cada campo.

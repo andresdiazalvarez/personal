@@ -14,8 +14,8 @@
         <h1 id="homeTitle">AGENDA</h1>
       </div>
       <div class="home-actions">
-        <button class="primary-action" id="enterButton" type="button">Entrar agenda</button>
-        <button class="secondary-action" id="enterTextButton" type="button">Entrar texto</button>
+        <button class="primary-action home-action-agenda" id="enterButton" type="button">Entrar agenda</button>
+        <button class="secondary-action home-action-text" id="enterTextButton" type="button">Entrar texto</button>
       </div>
     </section>
 
@@ -156,7 +156,7 @@
           Nombre
           <span class="input-with-voice">
             <input id="textNameInput" name="textName" type="text" placeholder="Nombre">
-            <button class="voice-button" type="button" data-text-voice-target="textName" aria-label="Dictar nombre por voz">Voz</button>
+            <button class="voice-button text-name-voice-button" type="button" data-text-voice-target="textName" aria-label="Dictar nombre por voz">Voz</button>
           </span>
         </label>
         <label>
@@ -167,7 +167,7 @@
           Redacción
           <span class="textarea-with-voice">
             <textarea id="redactionInput" name="redaction" rows="12" placeholder="Redacción"></textarea>
-            <button class="voice-button" type="button" data-text-voice-target="redaction" aria-label="Dictar redacción por voz">Voz</button>
+            <button class="voice-button redaction-voice-button" type="button" data-text-voice-target="redaction" aria-label="Dictar redacción por voz">Voz</button>
           </span>
         </label>
         <div class="form-actions">

@@ -42,6 +42,10 @@ let editingTextId = null;
 let activeRecognition = null;
 let phoneVoiceTimer = null;
 let phoneInputTimer = null;
+let textVoiceTimer = null;
+let textVoiceStopRequested = false;
+
+const textDictationSilenceMs = 10000;
 
 const spokenPhoneNumbers = {
   cero: "0",
@@ -220,6 +224,44 @@ function finishPhoneVoiceInput(input, recognition) {
   }
 }
 
+function clearTextVoiceTimer() {
+  if (textVoiceTimer) {
+    clearTimeout(textVoiceTimer);
+    textVoiceTimer = null;
+  }
+}
+
+function waitForTextSilence(recognition, statusElement, message) {
+  clearTextVoiceTimer();
+  textVoiceStopRequested = false;
+  textVoiceTimer = setTimeout(() => {
+    textVoiceTimer = null;
+    textVoiceStopRequested = true;
+    statusElement.textContent = message;
+
+    if (activeRecognition === recognition) {
+      recognition.stop();
+    }
+  }, textDictationSilenceMs);
+}
+
+function appendDictatedText(input, transcript) {
+  const cleanTranscript = transcript.trim();
+
+  if (!cleanTranscript) {
+    return;
+  }
+
+  const currentValue = input.value;
+  const needsSpace =
+    currentValue.trim().length > 0 &&
+    !/\s$/.test(currentValue) &&
+    !/^[,.;:!?)]/.test(cleanTranscript) &&
+    !/[¿¡(]$/.test(currentValue);
+
+  input.value = `${currentValue}${needsSpace ? " " : ""}${cleanTranscript}`;
+}
+
 function startVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = contactForm.elements[fieldKey];
@@ -242,18 +284,19 @@ function startVoiceInput(fieldKey) {
     clearTimeout(phoneInputTimer);
     phoneInputTimer = null;
   }
+  clearTextVoiceTimer();
 
   const recognition = new SpeechRecognition();
   const field = fields.find((item) => item.key === fieldKey);
 
   activeRecognition = recognition;
   recognition.lang = "es-ES";
-  recognition.continuous = isPhoneField;
+  recognition.continuous = true;
   recognition.interimResults = isPhoneField;
   recognition.maxAlternatives = 1;
   voiceStatus.textContent = isPhoneField
     ? "Di los numeros uno a uno. Termino tras 3 segundos sin oir otro numero."
-    : `Escuchando ${field.label.toLowerCase()}...`;
+    : `Escuchando ${field.label.toLowerCase()}... termina tras 10 segundos de silencio.`;
   if (isPhoneField) {
     input.value = normalizePhoneText(input.value);
     input.blur();
@@ -287,10 +330,18 @@ function startVoiceInput(fieldKey) {
       return;
     }
 
-    const transcript = event.results[0][0].transcript.trim();
-    input.value = transcript;
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      if (!event.results[index].isFinal || processedResultIndexes.has(index)) {
+        continue;
+      }
+
+      processedResultIndexes.add(index);
+      appendDictatedText(input, event.results[index][0].transcript);
+    }
+
     input.focus();
-    voiceStatus.textContent = `${field.label} escrito por voz.`;
+    voiceStatus.textContent = `${field.label} escrito por voz. Esperando 10 segundos de silencio.`;
+    waitForTextSilence(recognition, voiceStatus, `${field.label} escrito por voz.`);
   });
 
   recognition.addEventListener("error", () => {
@@ -305,6 +356,20 @@ function startVoiceInput(fieldKey) {
       clearTimeout(phoneVoiceTimer);
       phoneVoiceTimer = null;
     }
+    if (!isPhoneField) {
+      if (textVoiceTimer && !textVoiceStopRequested) {
+        try {
+          processedResultIndexes.clear();
+          recognition.start();
+          activeRecognition = recognition;
+          return;
+        } catch (error) {
+          voiceStatus.textContent = "El dictado se ha detenido antes de los 10 segundos. Puedes pulsar Voz para continuar.";
+        }
+      }
+      clearTextVoiceTimer();
+    }
+    textVoiceStopRequested = false;
     activeRecognition = null;
   });
 
@@ -320,6 +385,7 @@ function startTextVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = textForm.elements[fieldKey];
   const isRedaction = fieldKey === "redaction";
+  const processedResultIndexes = new Set();
 
   if (!SpeechRecognition) {
     textVoiceStatus.textContent = "Tu navegador no permite dictado por voz. Prueba con Chrome o Edge.";
@@ -329,28 +395,37 @@ function startTextVoiceInput(fieldKey) {
   if (activeRecognition) {
     activeRecognition.stop();
   }
+  clearTextVoiceTimer();
 
   const recognition = new SpeechRecognition();
   activeRecognition = recognition;
   recognition.lang = "es-ES";
-  recognition.continuous = isRedaction;
+  recognition.continuous = true;
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
-  textVoiceStatus.textContent = isRedaction ? "Escuchando redacción..." : "Escuchando nombre...";
+  textVoiceStatus.textContent = isRedaction
+    ? "Escuchando redacción... termina tras 10 segundos de silencio."
+    : "Escuchando nombre... termina tras 10 segundos de silencio.";
 
   recognition.addEventListener("result", (event) => {
-    const transcript = event.results[event.results.length - 1][0].transcript.trim();
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      if (!event.results[index].isFinal || processedResultIndexes.has(index)) {
+        continue;
+      }
 
-    if (isRedaction) {
-      const separator = input.value.trim() ? " " : "";
-      input.value += `${separator}${transcript}`;
-      textVoiceStatus.textContent = "Redacción añadida por voz.";
-      return;
+      processedResultIndexes.add(index);
+      appendDictatedText(input, event.results[index][0].transcript);
     }
 
-    input.value = transcript;
     input.focus();
-    textVoiceStatus.textContent = "Nombre escrito por voz.";
+    textVoiceStatus.textContent = isRedaction
+      ? "Redacción añadida por voz. Esperando 10 segundos de silencio."
+      : "Nombre escrito por voz. Esperando 10 segundos de silencio.";
+    waitForTextSilence(
+      recognition,
+      textVoiceStatus,
+      isRedaction ? "Redacción terminada por voz." : "Nombre escrito por voz."
+    );
   });
 
   recognition.addEventListener("error", () => {
@@ -358,11 +433,29 @@ function startTextVoiceInput(fieldKey) {
   });
 
   recognition.addEventListener("end", () => {
+    if (textVoiceTimer && !textVoiceStopRequested) {
+      try {
+        processedResultIndexes.clear();
+        recognition.start();
+        activeRecognition = recognition;
+        return;
+      } catch (error) {
+        textVoiceStatus.textContent = "El dictado se ha detenido antes de los 10 segundos. Puedes pulsar Voz para continuar.";
+      }
+    }
+
+    clearTextVoiceTimer();
+    textVoiceStopRequested = false;
     activeRecognition = null;
   });
 
   try {
     recognition.start();
+    waitForTextSilence(
+      recognition,
+      textVoiceStatus,
+      isRedaction ? "Redacción terminada por voz." : "Nombre escrito por voz."
+    );
   } catch (error) {
     activeRecognition = null;
     textVoiceStatus.textContent = "No se pudo iniciar el microfono. Revisa los permisos del navegador.";
