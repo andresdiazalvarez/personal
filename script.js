@@ -49,9 +49,12 @@ let phoneVoiceTimer = null;
 let phoneInputTimer = null;
 let textVoiceTimer = null;
 let textVoiceStopRequested = false;
+let redactionPhraseTimer = null;
+let pendingRedactionParts = [];
 let currentTextPhotos = [];
 
 const textDictationSilenceMs = 10000;
+const redactionPhraseDelayMs = 5000;
 const maxTextPhotos = 4;
 
 const spokenPhoneNumbers = {
@@ -404,6 +407,32 @@ function appendRedactionTranscript(input, transcript) {
   }
 }
 
+function flushPendingRedaction(input) {
+  if (redactionPhraseTimer) {
+    clearTimeout(redactionPhraseTimer);
+    redactionPhraseTimer = null;
+  }
+
+  const transcript = pendingRedactionParts.join(" ").trim();
+  pendingRedactionParts = [];
+
+  if (transcript) {
+    appendRedactionTranscript(input, transcript);
+  }
+}
+
+function queueRedactionTranscript(input, transcript) {
+  pendingRedactionParts.push(transcript);
+
+  if (redactionPhraseTimer) {
+    clearTimeout(redactionPhraseTimer);
+  }
+
+  redactionPhraseTimer = setTimeout(() => {
+    flushPendingRedaction(input);
+  }, redactionPhraseDelayMs);
+}
+
 function startVoiceInput(fieldKey) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const input = contactForm.elements[fieldKey];
@@ -537,6 +566,9 @@ function startTextVoiceInput(fieldKey) {
     activeRecognition.stop();
   }
   clearTextVoiceTimer();
+  if (isRedaction) {
+    flushPendingRedaction(input);
+  }
 
   const recognition = new SpeechRecognition();
   activeRecognition = recognition;
@@ -556,14 +588,14 @@ function startTextVoiceInput(fieldKey) {
 
       processedResultIndexes.add(index);
       if (isRedaction) {
-        appendRedactionTranscript(input, event.results[index][0].transcript);
+        queueRedactionTranscript(input, event.results[index][0].transcript);
       } else {
         appendDictatedText(input, event.results[index][0].transcript);
       }
     }
 
     textVoiceStatus.textContent = isRedaction
-      ? "Redacción añadida por voz. Esperando 10 segundos de silencio."
+      ? "Redacción recogida. Espero 5 segundos por si sigues la frase."
       : "Nombre escrito por voz. Esperando 10 segundos de silencio.";
     waitForTextSilence(
       recognition,
@@ -586,6 +618,10 @@ function startTextVoiceInput(fieldKey) {
       } catch (error) {
         textVoiceStatus.textContent = "El dictado se ha detenido antes de los 10 segundos. Puedes pulsar Voz para continuar.";
       }
+    }
+
+    if (isRedaction) {
+      flushPendingRedaction(input);
     }
 
     clearTextVoiceTimer();
