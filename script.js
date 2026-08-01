@@ -391,23 +391,22 @@ function ensurePeriodBeforeParagraph(value) {
 }
 
 function appendRedactionTranscript(input, transcript) {
-  const makesNewParagraph = /\baparte[\s.,;:!?]*$/i.test(transcript);
-  let cleanValue = makesNewParagraph
-    ? transcript.replace(/\baparte[\s.,;:!?]*$/i, "")
-    : transcript;
+  const parts = transcript
+    .split(/\baparte\b/gi)
+    .map((part) => part.trim().replace(/^[.,;:!?]+|[.,;:!?]+$/g, ""));
 
-  cleanValue = cleanValue.trim().replace(/[.,;:!?]+$/g, "");
+  parts.forEach((part, index) => {
+    if (part) {
+      appendDictatedText(input, `${capitalizeFirstLetter(part)}.`);
+    }
 
-  if (cleanValue) {
-    appendDictatedText(input, `${capitalizeFirstLetter(cleanValue)}.`);
-  }
-
-  if (makesNewParagraph) {
-    input.value = `${ensurePeriodBeforeParagraph(input.value)}\n\n`;
-  }
+    if (index < parts.length - 1) {
+      input.value = `${ensurePeriodBeforeParagraph(input.value)}\n\n`;
+    }
+  });
 }
 
-function flushPendingRedaction(input) {
+function flushPendingRedaction(input, recognition = null) {
   if (redactionPhraseTimer) {
     clearTimeout(redactionPhraseTimer);
     redactionPhraseTimer = null;
@@ -416,12 +415,17 @@ function flushPendingRedaction(input) {
   const transcript = pendingRedactionParts.join(" ").trim();
   pendingRedactionParts = [];
 
+  if (recognition && activeRecognition === recognition) {
+    textVoiceStopRequested = true;
+    recognition.stop();
+  }
+
   if (transcript) {
     appendRedactionTranscript(input, transcript);
   }
 }
 
-function queueRedactionTranscript(input, transcript) {
+function queueRedactionTranscript(input, transcript, recognition) {
   pendingRedactionParts.push(transcript);
 
   if (redactionPhraseTimer) {
@@ -429,7 +433,8 @@ function queueRedactionTranscript(input, transcript) {
   }
 
   redactionPhraseTimer = setTimeout(() => {
-    flushPendingRedaction(input);
+    flushPendingRedaction(input, recognition);
+    textVoiceStatus.textContent = "Redacción escrita. Pulsa Voz redacción para seguir.";
   }, redactionPhraseDelayMs);
 }
 
@@ -588,7 +593,7 @@ function startTextVoiceInput(fieldKey) {
 
       processedResultIndexes.add(index);
       if (isRedaction) {
-        queueRedactionTranscript(input, event.results[index][0].transcript);
+        queueRedactionTranscript(input, event.results[index][0].transcript, recognition);
       } else {
         appendDictatedText(input, event.results[index][0].transcript);
       }
@@ -609,7 +614,7 @@ function startTextVoiceInput(fieldKey) {
   });
 
   recognition.addEventListener("end", () => {
-    if (textVoiceTimer && !textVoiceStopRequested) {
+    if (!isRedaction && textVoiceTimer && !textVoiceStopRequested) {
       try {
         processedResultIndexes.clear();
         recognition.start();
@@ -620,7 +625,7 @@ function startTextVoiceInput(fieldKey) {
       }
     }
 
-    if (isRedaction) {
+    if (isRedaction && !redactionPhraseTimer) {
       flushPendingRedaction(input);
     }
 
