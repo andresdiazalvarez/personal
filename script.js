@@ -50,12 +50,12 @@ let phoneVoiceTimer = null;
 let phoneInputTimer = null;
 let textVoiceTimer = null;
 let textVoiceStopRequested = false;
-let redactionPhraseTimer = null;
-let pendingRedactionParts = [];
+let redactionVoiceActive = false;
+let redactionDictationStarted = false;
+let redactionManualStop = false;
 let currentTextPhotos = [];
 
 const textDictationSilenceMs = 10000;
-const redactionPhraseDelayMs = 5000;
 const maxTextPhotos = 4;
 
 const spokenPhoneNumbers = {
@@ -407,36 +407,61 @@ function appendRedactionTranscript(input, transcript) {
   });
 }
 
-function flushPendingRedaction(input, recognition = null) {
-  if (redactionPhraseTimer) {
-    clearTimeout(redactionPhraseTimer);
-    redactionPhraseTimer = null;
+function speakAppMessage(message) {
+  if (!("speechSynthesis" in window)) {
+    return;
   }
 
-  const transcript = pendingRedactionParts.join(" ").trim();
-  pendingRedactionParts = [];
+  const utterance = new SpeechSynthesisUtterance(message);
+  utterance.lang = "es-ES";
+  window.speechSynthesis.speak(utterance);
+}
 
-  if (recognition && activeRecognition === recognition) {
-    textVoiceStopRequested = true;
+function stopRedactionVoice(recognition) {
+  redactionVoiceActive = false;
+  redactionDictationStarted = false;
+  redactionManualStop = true;
+
+  if (activeRecognition === recognition) {
     recognition.stop();
-  }
-
-  if (transcript) {
-    appendRedactionTranscript(input, transcript);
   }
 }
 
-function queueRedactionTranscript(input, transcript, recognition) {
-  pendingRedactionParts.push(transcript);
+function handleRedactionCommand(input, transcript, recognition) {
+  const cleanTranscript = transcript.trim();
 
-  if (redactionPhraseTimer) {
-    clearTimeout(redactionPhraseTimer);
+  if (!cleanTranscript) {
+    return;
   }
 
-  redactionPhraseTimer = setTimeout(() => {
-    flushPendingRedaction(input, recognition);
-    textVoiceStatus.textContent = "Redacción escrita. Pulsa Voz redacción para seguir.";
-  }, redactionPhraseDelayMs);
+  if (!redactionDictationStarted) {
+    if (/\bvoz\b/i.test(cleanTranscript)) {
+      redactionDictationStarted = true;
+      textVoiceStatus.textContent = "Empiezo. Ya puedes redactar.";
+      speakAppMessage("empiezo");
+    } else {
+      textVoiceStatus.textContent = "Esperando la orden voz.";
+    }
+    return;
+  }
+
+  const stopParts = cleanTranscript.split(/\bparar\b/i);
+  const textBeforeStop = stopParts[0].trim();
+  const shouldStop = stopParts.length > 1;
+
+  if (textBeforeStop) {
+    appendRedactionTranscript(input, textBeforeStop);
+  }
+
+  if (shouldStop) {
+    textVoiceStatus.textContent = "Termino.";
+    stopRedactionVoice(recognition);
+    speakAppMessage("termino");
+    saveCurrentTextRecord({ announce: true });
+    return;
+  }
+
+  textVoiceStatus.textContent = "Redacción escrita. Sigo esperando.";
 }
 
 function startVoiceInput(fieldKey) {
@@ -572,18 +597,18 @@ function startTextVoiceInput(fieldKey) {
     activeRecognition.stop();
   }
   clearTextVoiceTimer();
-  if (isRedaction) {
-    flushPendingRedaction(input);
-  }
 
   const recognition = new SpeechRecognition();
   activeRecognition = recognition;
+  redactionManualStop = false;
+  redactionVoiceActive = isRedaction;
+  redactionDictationStarted = false;
   recognition.lang = "es-ES";
   recognition.continuous = true;
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
   textVoiceStatus.textContent = isRedaction
-    ? "Escuchando redacción... termina tras 10 segundos de silencio."
+    ? "Esperando la orden voz."
     : "Escuchando nombre... termina tras 10 segundos de silencio.";
 
   recognition.addEventListener("result", (event) => {
@@ -594,20 +619,16 @@ function startTextVoiceInput(fieldKey) {
 
       processedResultIndexes.add(index);
       if (isRedaction) {
-        queueRedactionTranscript(input, event.results[index][0].transcript, recognition);
+        handleRedactionCommand(input, event.results[index][0].transcript, recognition);
       } else {
         appendDictatedText(input, event.results[index][0].transcript);
       }
     }
 
-    textVoiceStatus.textContent = isRedaction
-      ? "Redacción recogida. Espero 5 segundos por si sigues la frase."
-      : "Nombre escrito por voz. Esperando 10 segundos de silencio.";
-    waitForTextSilence(
-      recognition,
-      textVoiceStatus,
-      isRedaction ? "Redacción terminada por voz." : "Nombre escrito por voz."
-    );
+    if (!isRedaction) {
+      textVoiceStatus.textContent = "Nombre escrito por voz. Esperando 10 segundos de silencio.";
+      waitForTextSilence(recognition, textVoiceStatus, "Nombre escrito por voz.");
+    }
   });
 
   recognition.addEventListener("error", () => {
@@ -615,6 +636,17 @@ function startTextVoiceInput(fieldKey) {
   });
 
   recognition.addEventListener("end", () => {
+    if (isRedaction && redactionVoiceActive && !redactionManualStop) {
+      try {
+        processedResultIndexes.clear();
+        recognition.start();
+        activeRecognition = recognition;
+        return;
+      } catch (error) {
+        textVoiceStatus.textContent = "El dictado se ha detenido. Pulsa Voz redacción para continuar.";
+      }
+    }
+
     if (!isRedaction && textVoiceTimer && !textVoiceStopRequested) {
       try {
         processedResultIndexes.clear();
@@ -626,8 +658,10 @@ function startTextVoiceInput(fieldKey) {
       }
     }
 
-    if (isRedaction && !redactionPhraseTimer) {
-      flushPendingRedaction(input);
+    if (isRedaction) {
+      redactionVoiceActive = false;
+      redactionDictationStarted = false;
+      redactionManualStop = false;
     }
 
     clearTextVoiceTimer();
@@ -637,11 +671,9 @@ function startTextVoiceInput(fieldKey) {
 
   try {
     recognition.start();
-    waitForTextSilence(
-      recognition,
-      textVoiceStatus,
-      isRedaction ? "Redacción terminada por voz." : "Nombre escrito por voz."
-    );
+    if (!isRedaction) {
+      waitForTextSilence(recognition, textVoiceStatus, "Nombre escrito por voz.");
+    }
   } catch (error) {
     activeRecognition = null;
     textVoiceStatus.textContent = "No se pudo iniciar el microfono. Revisa los permisos del navegador.";
@@ -896,6 +928,44 @@ function renderTextRecords() {
   });
 }
 
+function saveCurrentTextRecord({ announce = false } = {}) {
+  const formData = new FormData(textForm);
+  const hasText =
+    formData.get("textName").trim() ||
+    formData.get("redaction").trim() ||
+    currentTextPhotos.length > 0;
+
+  if (!hasText) {
+    textVoiceStatus.textContent = "No hay texto para guardar.";
+    return false;
+  }
+
+  const record = {
+    id: editingTextId || createContactId(),
+    name: formData.get("textName").trim(),
+    date: textDateInput.value || formatDateTime(),
+    redaction: formData.get("redaction").trim(),
+    photos: [...currentTextPhotos]
+  };
+
+  if (editingTextId) {
+    textRecords = textRecords.map((item) => (item.id === editingTextId ? record : item));
+  } else {
+    textRecords.unshift(record);
+    editingTextId = record.id;
+  }
+
+  saveTextRecords();
+  renderTextRecords();
+  textVoiceStatus.textContent = "Guardado.";
+
+  if (announce) {
+    speakAppMessage("guardado");
+  }
+
+  return true;
+}
+
 function renderDataTable(visibleContacts) {
   tableWrap.innerHTML = "";
   tableCount.textContent = `${visibleContacts.length} registro${visibleContacts.length === 1 ? "" : "s"}`;
@@ -1069,24 +1139,10 @@ contactForm.addEventListener("submit", (event) => {
 
 textForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const formData = new FormData(textForm);
-  const record = {
-    id: editingTextId || createContactId(),
-    name: formData.get("textName").trim(),
-    date: textDateInput.value || formatDateTime(),
-    redaction: formData.get("redaction").trim(),
-    photos: [...currentTextPhotos]
-  };
-
-  if (editingTextId) {
-    textRecords = textRecords.map((item) => (item.id === editingTextId ? record : item));
-  } else {
-    textRecords.unshift(record);
-    editingTextId = record.id;
+  if (redactionVoiceActive && activeRecognition) {
+    stopRedactionVoice(activeRecognition);
   }
-
-  saveTextRecords();
-  renderTextRecords();
+  saveCurrentTextRecord({ announce: true });
 });
 
 newTextButton.addEventListener("click", () => {
