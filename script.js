@@ -24,6 +24,7 @@ const saveTextButton = document.getElementById("saveTextButton");
 const newTextButton = document.getElementById("newTextButton");
 const cancelTextEditButton = document.getElementById("cancelTextEditButton");
 const downloadWordButton = document.getElementById("downloadWordButton");
+const downloadPdfButton = document.getElementById("downloadPdfButton");
 const clearTextFiltersButton = document.getElementById("clearTextFiltersButton");
 const textCameraInput = document.getElementById("textCameraInput");
 const textGalleryInput = document.getElementById("textGalleryInput");
@@ -709,14 +710,8 @@ function getVisibleTextRecords() {
   return textRecords.filter(matchesTextFilters);
 }
 
-function downloadWord() {
-  const visibleRecords = getVisibleTextRecords();
-
-  if (visibleRecords.length === 0) {
-    return;
-  }
-
-  const recordsHtml = visibleRecords
+function createTextRecordsHtml(records) {
+  return records
     .map((record) => {
       const photosHtml = (record.photos || [])
         .map((photo) => `<img src="${photo.dataUrl}" alt="${escapeHtml(photo.name || "Foto")}" style="max-width: 320px; height: auto; margin: 8px 8px 8px 0;">`)
@@ -731,6 +726,16 @@ function downloadWord() {
       `;
     })
     .join("");
+}
+
+function downloadWord() {
+  const visibleRecords = getVisibleTextRecords();
+
+  if (visibleRecords.length === 0) {
+    return;
+  }
+
+  const recordsHtml = createTextRecordsHtml(visibleRecords);
   const wordHtml = `<!doctype html>
 <html>
 <head>
@@ -753,6 +758,47 @@ function downloadWord() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function downloadPdf() {
+  const visibleRecords = getVisibleTextRecords();
+
+  if (visibleRecords.length === 0) {
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+
+  if (!printWindow) {
+    textVoiceStatus.textContent = "El navegador ha bloqueado la ventana del PDF. Permite ventanas emergentes e intentalo otra vez.";
+    return;
+  }
+
+  const recordsHtml = createTextRecordsHtml(visibleRecords);
+  printWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Textos PERSONAL PDF</title>
+  <style>
+    body { margin: 24px; color: #2f2437; font-family: Arial, sans-serif; }
+    h1 { margin: 0 0 24px; color: #4d2d61; }
+    h2 { margin: 24px 0 6px; color: #4d2d61; page-break-after: avoid; }
+    p { line-height: 1.45; white-space: pre-wrap; }
+    img { max-width: 320px; height: auto; margin: 8px 8px 8px 0; page-break-inside: avoid; }
+    hr { margin: 24px 0; border: 0; border-top: 1px solid #d8c2e3; }
+  </style>
+</head>
+<body>
+  <h1>Textos PERSONAL</h1>
+  ${recordsHtml}
+</body>
+</html>`);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.addEventListener("load", () => {
+    printWindow.print();
+  });
 }
 
 function deleteContact(contact) {
@@ -790,6 +836,7 @@ function renderTextRecords() {
   textList.innerHTML = "";
   textCount.textContent = `${visibleRecords.length} texto${visibleRecords.length === 1 ? "" : "s"}`;
   downloadWordButton.disabled = visibleRecords.length === 0;
+  downloadPdfButton.disabled = visibleRecords.length === 0;
 
   if (visibleRecords.length === 0) {
     const empty = document.createElement("p");
@@ -1088,6 +1135,7 @@ clearFiltersButton.addEventListener("click", () => {
 
 downloadExcelButton.addEventListener("click", downloadExcel);
 downloadWordButton.addEventListener("click", downloadWord);
+downloadPdfButton.addEventListener("click", downloadPdf);
 cancelEditButton.addEventListener("click", () => {
   setFormMode();
 });
