@@ -52,7 +52,6 @@ let textVoiceTimer = null;
 let textVoiceStopRequested = false;
 let redactionVoiceActive = false;
 let redactionDictationStarted = false;
-let redactionManualStop = false;
 let currentTextPhotos = [];
 
 const textDictationSilenceMs = 10000;
@@ -420,7 +419,6 @@ function speakAppMessage(message) {
 function stopRedactionVoice(recognition) {
   redactionVoiceActive = false;
   redactionDictationStarted = false;
-  redactionManualStop = true;
 
   if (activeRecognition === recognition) {
     recognition.stop();
@@ -600,7 +598,6 @@ function startTextVoiceInput(fieldKey) {
 
   const recognition = new SpeechRecognition();
   activeRecognition = recognition;
-  redactionManualStop = false;
   redactionVoiceActive = isRedaction;
   redactionDictationStarted = false;
   recognition.lang = "es-ES";
@@ -636,17 +633,6 @@ function startTextVoiceInput(fieldKey) {
   });
 
   recognition.addEventListener("end", () => {
-    if (isRedaction && redactionVoiceActive && !redactionManualStop) {
-      try {
-        processedResultIndexes.clear();
-        recognition.start();
-        activeRecognition = recognition;
-        return;
-      } catch (error) {
-        textVoiceStatus.textContent = "El dictado se ha detenido. Pulsa Voz redacción para continuar.";
-      }
-    }
-
     if (!isRedaction && textVoiceTimer && !textVoiceStopRequested) {
       try {
         processedResultIndexes.clear();
@@ -661,7 +647,6 @@ function startTextVoiceInput(fieldKey) {
     if (isRedaction) {
       redactionVoiceActive = false;
       redactionDictationStarted = false;
-      redactionManualStop = false;
     }
 
     clearTextVoiceTimer();

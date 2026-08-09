@@ -1,4 +1,4 @@
-const CACHE_NAME = "memoria-v5";
+const CACHE_NAME = "memoria-v6";
 const APP_FILES = [
   "./",
   "./index.html",
