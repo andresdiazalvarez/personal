@@ -52,9 +52,12 @@ let textVoiceTimer = null;
 let textVoiceStopRequested = false;
 let redactionVoiceActive = false;
 let redactionDictationStarted = false;
+let redactionWriteTimer = null;
+let pendingRedactionTextParts = [];
 let currentTextPhotos = [];
 
 const textDictationSilenceMs = 10000;
+const redactionWriteDelayMs = 2000;
 const maxTextPhotos = 4;
 
 const spokenPhoneNumbers = {
@@ -416,9 +419,46 @@ function speakAppMessage(message) {
   window.speechSynthesis.speak(utterance);
 }
 
+function flushPendingRedactionText(input) {
+  if (redactionWriteTimer) {
+    clearTimeout(redactionWriteTimer);
+    redactionWriteTimer = null;
+  }
+
+  const transcript = pendingRedactionTextParts.join(" ").trim();
+  pendingRedactionTextParts = [];
+
+  if (transcript) {
+    appendRedactionTranscript(input, transcript);
+    textVoiceStatus.textContent = "Redacción escrita. Sigo esperando.";
+  }
+}
+
+function queueRedactionText(input, transcript) {
+  const cleanTranscript = transcript.trim();
+
+  if (!cleanTranscript || /^(empiezo|termino|guardado)$/i.test(cleanTranscript)) {
+    return;
+  }
+
+  pendingRedactionTextParts.push(cleanTranscript);
+
+  if (redactionWriteTimer) {
+    clearTimeout(redactionWriteTimer);
+  }
+
+  redactionWriteTimer = setTimeout(() => {
+    flushPendingRedactionText(input);
+  }, redactionWriteDelayMs);
+}
+
 function stopRedactionVoice(recognition) {
   redactionVoiceActive = false;
   redactionDictationStarted = false;
+  if (redactionWriteTimer) {
+    clearTimeout(redactionWriteTimer);
+    redactionWriteTimer = null;
+  }
 
   if (activeRecognition === recognition) {
     recognition.stop();
@@ -433,10 +473,17 @@ function handleRedactionCommand(input, transcript, recognition) {
   }
 
   if (!redactionDictationStarted) {
-    if (/\bvoz\b/i.test(cleanTranscript)) {
+    const voiceParts = cleanTranscript.split(/\bvoz\b/i);
+
+    if (voiceParts.length > 1) {
       redactionDictationStarted = true;
       textVoiceStatus.textContent = "Empiezo. Ya puedes redactar.";
       speakAppMessage("empiezo");
+      const textAfterVoice = voiceParts.slice(1).join(" ").trim();
+
+      if (textAfterVoice) {
+        queueRedactionText(input, textAfterVoice);
+      }
     } else {
       textVoiceStatus.textContent = "Esperando la orden voz.";
     }
@@ -448,10 +495,11 @@ function handleRedactionCommand(input, transcript, recognition) {
   const shouldStop = stopParts.length > 1;
 
   if (textBeforeStop) {
-    appendRedactionTranscript(input, textBeforeStop);
+    queueRedactionText(input, textBeforeStop);
   }
 
   if (shouldStop) {
+    flushPendingRedactionText(input);
     textVoiceStatus.textContent = "Termino.";
     stopRedactionVoice(recognition);
     speakAppMessage("termino");
@@ -459,7 +507,7 @@ function handleRedactionCommand(input, transcript, recognition) {
     return;
   }
 
-  textVoiceStatus.textContent = "Redacción escrita. Sigo esperando.";
+  textVoiceStatus.textContent = "Redacción recibida. Escribo en 2 segundos.";
 }
 
 function startVoiceInput(fieldKey) {
@@ -595,6 +643,13 @@ function startTextVoiceInput(fieldKey) {
     activeRecognition.stop();
   }
   clearTextVoiceTimer();
+  if (isRedaction) {
+    if (redactionWriteTimer) {
+      clearTimeout(redactionWriteTimer);
+      redactionWriteTimer = null;
+    }
+    pendingRedactionTextParts = [];
+  }
 
   const recognition = new SpeechRecognition();
   activeRecognition = recognition;
@@ -633,6 +688,17 @@ function startTextVoiceInput(fieldKey) {
   });
 
   recognition.addEventListener("end", () => {
+    if (isRedaction && redactionVoiceActive) {
+      try {
+        processedResultIndexes.clear();
+        recognition.start();
+        activeRecognition = recognition;
+        return;
+      } catch (error) {
+        textVoiceStatus.textContent = "Pulsa Voz redacción para continuar.";
+      }
+    }
+
     if (!isRedaction && textVoiceTimer && !textVoiceStopRequested) {
       try {
         processedResultIndexes.clear();
@@ -1124,6 +1190,7 @@ contactForm.addEventListener("submit", (event) => {
 
 textForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  flushPendingRedactionText(textForm.elements.redaction);
   if (redactionVoiceActive && activeRecognition) {
     stopRedactionVoice(activeRecognition);
   }
