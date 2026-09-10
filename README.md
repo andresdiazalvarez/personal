@@ -9,6 +9,7 @@ App web sencilla de agenda personal con diseño malva claro.
 - Dictado por voz para nombre, telefono, otros 1 y otros 2.
 - Dictado del telefono numero a numero y cierre tras 3 segundos sin oir otro numero.
 - Enlace directo para llamar a los telefonos guardados.
+- Archivo adjunto por contacto: foto, imagen o fichero, con opcion de eliminar y sustituir.
 - Modificacion de contactos guardados.
 - Pantalla de textos con nombre, fecha automatica y redaccion larga.
 - Dictado por voz para nombre y redaccion, con cierre tras 10 segundos de silencio y continuacion acumulada.
@@ -19,7 +20,7 @@ App web sencilla de agenda personal con diseño malva claro.
 - Cuadro de datos filtrable con acciones para modificar y borrar.
 - Descarga de contactos visibles en formato Excel.
 - Guardado local en el navegador.
-- Instalable como app `memoria` con icono verde y naranja.
+- Instalable como app `agenda` con icono verde y naranja.
 - Preparada para GitHub Pages.
 
 ## Publicar en GitHub Pages

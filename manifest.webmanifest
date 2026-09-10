@@ -1,6 +1,6 @@
 {
-  "name": "memoria",
-  "short_name": "memoria",
+  "name": "agenda",
+  "short_name": "agenda",
   "description": "Agenda y redacciones de PERSONAL",
   "start_url": "./index.html",
   "scope": "./",

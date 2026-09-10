@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PERSONAL</title>
+  <title>agenda</title>
   <meta name="theme-color" content="#16a34a">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="memoria">
+  <meta name="apple-mobile-web-app-title" content="agenda">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -70,6 +70,18 @@
             <button class="voice-button" type="button" data-voice-target="otherTwo" aria-label="Dictar otros 2 por voz">Voz</button>
           </span>
         </label>
+        <section class="contact-attachment-field" aria-label="Archivo del contacto">
+          <div class="attachment-actions">
+            <label class="attachment-action-button" for="contactCameraInput">Hacer foto</label>
+            <label class="attachment-action-button" for="contactImageInput">Cargar foto</label>
+            <label class="attachment-action-button" for="contactFileInput">Cargar fichero</label>
+          </div>
+          <input id="contactCameraInput" type="file" accept="image/*" capture="environment" hidden>
+          <input id="contactImageInput" type="file" accept="image/*" hidden>
+          <input id="contactFileInput" type="file" hidden>
+          <div class="attachment-preview" id="contactAttachmentPreview" aria-live="polite"></div>
+          <p class="attachment-status" id="contactAttachmentStatus">Puedes cargar una foto o un fichero.</p>
+        </section>
         <div class="form-actions">
           <button class="primary-action form-submit" id="saveButton" type="submit">Guardar</button>
           <button class="secondary-action cancel-edit-button" id="cancelEditButton" type="button" hidden>Cancelar</button>

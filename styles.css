@@ -283,6 +283,7 @@ textarea {
 .text-name-entry,
 .text-command-row,
 .text-photos-field,
+.contact-attachment-field,
 .new-text-button {
   grid-column: 1 / -1;
 }
@@ -329,7 +330,8 @@ textarea {
   box-shadow: 0 12px 28px rgba(18, 165, 56, 0.24);
 }
 
-.text-photos-field {
+.text-photos-field,
+.contact-attachment-field {
   display: grid;
   gap: 10px;
   padding: 12px;
@@ -338,13 +340,19 @@ textarea {
   background: rgba(255, 240, 217, 0.82);
 }
 
-.text-photos-actions {
+.text-photos-actions,
+.attachment-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.photo-action-button {
+.text-photos-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.photo-action-button,
+.attachment-action-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -357,13 +365,15 @@ textarea {
 }
 
 .text-photo-preview,
+.attachment-preview,
 .text-record-photos {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
-.photo-preview-item {
+.photo-preview-item,
+.attachment-preview-item {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(77, 45, 97, 0.18);
@@ -372,6 +382,8 @@ textarea {
 }
 
 .photo-preview-item img,
+.attachment-preview-item img,
+.attachment-link img,
 .text-record-photos img {
   width: 100%;
   aspect-ratio: 1;
@@ -379,7 +391,8 @@ textarea {
   border-radius: 8px;
 }
 
-.photo-preview-item button {
+.photo-preview-item button,
+.attachment-preview-item button {
   position: absolute;
   right: 6px;
   bottom: 6px;
@@ -392,11 +405,40 @@ textarea {
 }
 
 .photo-empty,
-.photo-status {
+.photo-status,
+.attachment-empty,
+.attachment-status,
+.attachment-preview-item p {
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
   font-weight: 700;
+}
+
+.attachment-preview-item p {
+  padding: 12px;
+  padding-right: 120px;
+}
+
+.attachment-file-badge,
+.attachment-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: #ffffff;
+  background: var(--mauve-700);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.attachment-link img {
+  width: 72px;
 }
 
 .new-text-button {
@@ -526,6 +568,10 @@ textarea {
   width: 285px;
 }
 
+.contacts-table .table-column-attachment {
+  width: 110px;
+}
+
 .contacts-table th:last-child,
 .contacts-table td:last-child {
   width: 125px;
@@ -594,7 +640,7 @@ textarea {
 
 .contact-card {
   display: grid;
-  grid-template-columns: 1.25fr repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: 1.25fr repeat(5, minmax(0, 1fr)) auto;
   gap: 12px;
   align-items: center;
   min-height: 64px;
@@ -618,6 +664,11 @@ textarea {
 
 .contact-value {
   overflow-wrap: anywhere;
+}
+
+.contact-attachment-card {
+  display: grid;
+  gap: 6px;
 }
 
 .call-link {
@@ -724,7 +775,7 @@ textarea {
   }
 
   .contacts-table {
-    min-width: 1040px;
+    min-width: 1160px;
   }
 
   .agenda-header,
@@ -742,8 +793,13 @@ textarea {
   }
 
   .text-photo-preview,
+  .attachment-preview,
   .text-record-photos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .attachment-actions {
+    grid-template-columns: 1fr;
   }
 
   .contact-form,
@@ -762,6 +818,8 @@ textarea {
   .edit-button,
   .delete-button,
   .voice-button,
+  .photo-action-button,
+  .attachment-action-button,
   .call-link,
   .home-actions {
     width: 100%;

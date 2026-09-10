@@ -15,6 +15,11 @@ const tableWrap = document.getElementById("tableWrap");
 const tableCount = document.getElementById("tableCount");
 const voiceStatus = document.getElementById("voiceStatus");
 const phoneInput = document.getElementById("phoneInput");
+const contactCameraInput = document.getElementById("contactCameraInput");
+const contactImageInput = document.getElementById("contactImageInput");
+const contactFileInput = document.getElementById("contactFileInput");
+const contactAttachmentPreview = document.getElementById("contactAttachmentPreview");
+const contactAttachmentStatus = document.getElementById("contactAttachmentStatus");
 const textForm = document.getElementById("textForm");
 const textDateInput = document.getElementById("textDateInput");
 const textVoiceStatus = document.getElementById("textVoiceStatus");
@@ -54,6 +59,7 @@ let redactionVoiceActive = false;
 let redactionDictationStarted = false;
 let redactionWriteTimer = null;
 let pendingRedactionTextParts = [];
+let currentContactAttachment = null;
 let currentTextPhotos = [];
 
 const textDictationSilenceMs = 10000;
@@ -88,6 +94,91 @@ function saveContacts() {
 
 function saveTextRecords() {
   localStorage.setItem(textStorageKey, JSON.stringify(textRecords));
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) {
+    return "";
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderContactAttachmentPreview() {
+  contactAttachmentPreview.innerHTML = "";
+
+  if (!currentContactAttachment) {
+    const empty = document.createElement("p");
+    empty.className = "attachment-empty";
+    empty.textContent = "Sin archivo cargado.";
+    contactAttachmentPreview.append(empty);
+    contactAttachmentStatus.textContent = "Puedes cargar una foto o un fichero.";
+    return;
+  }
+
+  const item = document.createElement("div");
+  item.className = "attachment-preview-item";
+
+  if (currentContactAttachment.type.startsWith("image/")) {
+    const image = document.createElement("img");
+    image.src = currentContactAttachment.dataUrl;
+    image.alt = currentContactAttachment.name || "Foto cargada";
+    item.append(image);
+  } else {
+    const fileBadge = document.createElement("span");
+    fileBadge.className = "attachment-file-badge";
+    fileBadge.textContent = "Archivo";
+    item.append(fileBadge);
+  }
+
+  const fileInfo = document.createElement("p");
+  fileInfo.textContent = `${currentContactAttachment.name || "Archivo"} ${formatFileSize(currentContactAttachment.size)}`;
+
+  const removeButton = document.createElement("button");
+  removeButton.type = "button";
+  removeButton.textContent = "Eliminar cargado";
+  removeButton.addEventListener("click", () => {
+    currentContactAttachment = null;
+    renderContactAttachmentPreview();
+  });
+
+  item.append(fileInfo, removeButton);
+  contactAttachmentPreview.append(item);
+  contactAttachmentStatus.textContent = "Archivo cargado. Puedes eliminarlo para cargar otro.";
+}
+
+async function prepareContactAttachment(file) {
+  if (!file) {
+    return;
+  }
+
+  contactAttachmentStatus.textContent = "Preparando archivo...";
+
+  try {
+    const isImage = file.type.startsWith("image/");
+    const attachment = isImage
+      ? await resizePhoto(file)
+      : {
+          id: createContactId(),
+          name: file.name || "archivo",
+          type: file.type || "application/octet-stream",
+          size: file.size || 0,
+          dataUrl: await readImageAsDataUrl(file)
+        };
+
+    currentContactAttachment = {
+      ...attachment,
+      type: isImage ? "image/jpeg" : attachment.type,
+      size: file.size || 0
+    };
+    renderContactAttachmentPreview();
+  } catch (error) {
+    contactAttachmentStatus.textContent = "No se pudo cargar el archivo. Prueba con otro.";
+  }
 }
 
 function updateTextPhotoStatus(message = "") {
@@ -204,12 +295,16 @@ function setFormMode(contact = null) {
 
   if (!contact) {
     contactForm.reset();
+    currentContactAttachment = null;
+    renderContactAttachmentPreview();
     return;
   }
 
   fields.forEach(({ key }) => {
     contactForm.elements[key].value = contact[key] || "";
   });
+  currentContactAttachment = contact.attachment || null;
+  renderContactAttachmentPreview();
 }
 
 function setTextFormMode(record = null) {
@@ -738,11 +833,12 @@ function downloadExcel() {
     return;
   }
 
-  const headerCells = fields.map(({ label }) => `<th>${escapeExcelCell(label)}</th>`).join("");
+  const headerCells = `${fields.map(({ label }) => `<th>${escapeExcelCell(label)}</th>`).join("")}<th>${escapeExcelCell("Archivo")}</th>`;
   const rows = visibleContacts
     .map((contact) => {
       const cells = fields.map(({ key }) => `<td>${escapeExcelCell(contact[key])}</td>`).join("");
-      return `<tr>${cells}</tr>`;
+      const attachmentCell = `<td>${escapeExcelCell(contact.attachment ? contact.attachment.name : "")}</td>`;
+      return `<tr>${cells}${attachmentCell}</tr>`;
     })
     .join("");
   const excelHtml = `<!doctype html>
@@ -899,6 +995,30 @@ function editContact(contact) {
   contactForm.elements.name.focus();
 }
 
+function createAttachmentLink(attachment) {
+  if (!attachment) {
+    return null;
+  }
+
+  const link = document.createElement("a");
+  link.className = "attachment-link";
+  link.href = attachment.dataUrl;
+  link.target = "_blank";
+  link.rel = "noopener";
+  link.download = attachment.name || "archivo";
+
+  if ((attachment.type || "").startsWith("image/")) {
+    const image = document.createElement("img");
+    image.src = attachment.dataUrl;
+    image.alt = attachment.name || "Foto cargada";
+    link.append(image);
+  } else {
+    link.textContent = attachment.name || "Abrir archivo";
+  }
+
+  return link;
+}
+
 function deleteTextRecord(record) {
   textRecords = textRecords.filter((item) => item.id !== record.id);
   if (editingTextId === record.id) {
@@ -1041,6 +1161,11 @@ function renderDataTable(visibleContacts) {
     th.textContent = label;
     headerRow.append(th);
   });
+  const attachmentHeader = document.createElement("th");
+  attachmentHeader.scope = "col";
+  attachmentHeader.className = "table-column-attachment";
+  attachmentHeader.textContent = "Archivo";
+  headerRow.append(attachmentHeader);
   const actionsHeader = document.createElement("th");
   actionsHeader.scope = "col";
   actionsHeader.textContent = "Acciones";
@@ -1072,6 +1197,16 @@ function renderDataTable(visibleContacts) {
 
       row.append(td);
     });
+
+    const attachmentCell = document.createElement("td");
+    attachmentCell.className = "table-column-attachment";
+    const attachmentLink = createAttachmentLink(contact.attachment);
+    if (attachmentLink) {
+      attachmentCell.append(attachmentLink);
+    } else {
+      attachmentCell.textContent = "-";
+    }
+    row.append(attachmentCell);
 
     const actions = document.createElement("td");
     const actionGroup = document.createElement("div");
@@ -1139,6 +1274,17 @@ function renderContacts() {
       card.append(field);
     });
 
+    const attachmentLink = createAttachmentLink(contact.attachment);
+    if (attachmentLink) {
+      const attachmentField = document.createElement("div");
+      attachmentField.className = "contact-field contact-attachment-card";
+      const attachmentLabel = document.createElement("span");
+      attachmentLabel.className = "contact-label";
+      attachmentLabel.textContent = "Archivo";
+      attachmentField.append(attachmentLabel, attachmentLink);
+      card.append(attachmentField);
+    }
+
     const cardActions = document.createElement("div");
     cardActions.className = "contact-card-actions";
 
@@ -1174,7 +1320,8 @@ contactForm.addEventListener("submit", (event) => {
     phone: normalizePhoneText(formData.get("phone")),
     email: formData.get("email").trim(),
     otherOne: formData.get("otherOne").trim(),
-    otherTwo: formData.get("otherTwo").trim()
+    otherTwo: formData.get("otherTwo").trim(),
+    attachment: currentContactAttachment
   };
 
   if (editingContactId) {
@@ -1242,6 +1389,16 @@ clearFiltersButton.addEventListener("click", () => {
 });
 
 downloadExcelButton.addEventListener("click", downloadExcel);
+[
+  contactCameraInput,
+  contactImageInput,
+  contactFileInput
+].forEach((input) => {
+  input.addEventListener("change", async () => {
+    await prepareContactAttachment(input.files[0]);
+    input.value = "";
+  });
+});
 downloadWordButton.addEventListener("click", downloadWord);
 downloadPdfButton.addEventListener("click", downloadPdf);
 cancelEditButton.addEventListener("click", () => {
