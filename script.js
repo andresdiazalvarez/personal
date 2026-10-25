@@ -38,9 +38,9 @@ const textPhotoStatus = document.getElementById("textPhotoStatus");
 
 const fields = [
   { key: "name", label: "Nombre" },
+  { key: "otherOne", label: "Otros 1" },
   { key: "phone", label: "Teléfono" },
   { key: "email", label: "Correo" },
-  { key: "otherOne", label: "Otros 1" },
   { key: "otherTwo", label: "Otros 2" }
 ];
 
