@@ -1,4 +1,4 @@
-const CACHE_NAME = "agenda-v8";
+const CACHE_NAME = "agenda-v9";
 const APP_FILES = [
   "./",
   "./index.html",

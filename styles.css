@@ -49,6 +49,28 @@ button {
 .screen {
   display: none;
   width: 100%;
+  min-width: 0;
+}
+
+.screen > *,
+.contact-form > *,
+.tools-section > *,
+.input-with-voice > *,
+.attachment-actions > * {
+  min-width: 0;
+}
+
+.agenda-screen button,
+.agenda-screen .attachment-action-button {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.agenda-screen input,
+.agenda-screen select {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .screen.is-active {
@@ -516,6 +538,8 @@ textarea {
 
 .table-wrap {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   border: 1px solid rgba(255, 222, 182, 0.68);
   border-radius: 8px;
