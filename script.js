@@ -488,20 +488,10 @@ function ensurePeriodBeforeParagraph(value) {
   return /[.!?]$/.test(trimmedValue) ? trimmedValue : `${trimmedValue}.`;
 }
 
+const redactionEditor = new RedactionEditor();
+
 function appendRedactionTranscript(input, transcript) {
-  const parts = transcript
-    .split(/\baparte\b/gi)
-    .map((part) => part.trim().replace(/^[.,;:!?]+|[.,;:!?]+$/g, ""));
-
-  parts.forEach((part, index) => {
-    if (part) {
-      appendDictatedText(input, `${capitalizeFirstLetter(part)}.`);
-    }
-
-    if (index < parts.length - 1) {
-      input.value = `${ensurePeriodBeforeParagraph(input.value)}\n\n`;
-    }
-  });
+  input.value = redactionEditor.apply(transcript, input.value);
 }
 
 function speakAppMessage(message) {

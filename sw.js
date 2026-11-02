@@ -1,9 +1,10 @@
-const CACHE_NAME = "agenda-v9";
+const CACHE_NAME = "agenda-v10";
 const APP_FILES = [
   "./",
   "./index.html",
   "./styles.css",
   "./script.js",
+  "./redaction-editor.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.png",
